@@ -150,6 +150,16 @@ class UserSettingsView(LoginRequiredMixin, UpdateView):
     def get_object(self, queryset=None):
         return self.request.user
 
+class DeveloperLab(LoginRequiredMixin, UpdateView):
+    """View to display ALLab """
+    template_name = "web/my/developerlab.html"
+    form_class = forms.UserSettingsForm
+    model = User
+    success_url = "/my/settings/"
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
 
 ############################################################
 # Competitions: template views

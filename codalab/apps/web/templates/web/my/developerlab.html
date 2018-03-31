@@ -1,0 +1,29 @@
+﻿{% extends 'base.html' %}
+{% load i18n %}
+{% load staticfiles %}
+{% load codalab_tags %}
+{% load tz %}
+
+{% block page_title %}开发者数据实验站{% endblock page_title %}
+{% block head_title %}开发者数据实验站{% endblock %}
+
+
+<h2>{{ user.username }}</h2>
+{% block content %}
+<div class="row">
+    <div class="col-sm-12">
+        <table class="table table-striped ">
+            <tbody>
+            <tr>
+                <th>First</th>
+            </tr>
+            <tr>
+                <th>second</th>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+

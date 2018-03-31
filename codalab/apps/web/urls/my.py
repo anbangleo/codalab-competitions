@@ -43,5 +43,6 @@ urlpatterns = patterns(
     url(r'^datasets/download/(?P<dataset_key>.+)', views.download_dataset, name='datasets_download'),
 
     # User settings
-    url(r'^settings/', views.UserSettingsView.as_view(), name='user_settings')
+    url(r'^settings/', views.UserSettingsView.as_view(), name='user_settings'),
+    url(r'^developerlab/', views.DeveloperLab.as_view(), name='user_developerlab')
 )
