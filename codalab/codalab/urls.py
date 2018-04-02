@@ -4,13 +4,15 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.views.generic import TemplateView
-
+from django.views.generic import RedirectView
 from apps.web.views import MyAdminView
 
 admin.autodiscover()
 
 urlpatterns = patterns('',
+    #
     url(r'', include('apps.web.urls')),
+    #url(r'^$', RedirectView.as_view(url='/my/developerlab/')),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^clients/', include('apps.authenz.urls')),
     url(r'^api/', include('apps.api.routers')),
@@ -38,6 +40,7 @@ urlpatterns = patterns('',
 
     # JS Reverse for saner AJAX calls
     url(r'^jsreverse/$', 'django_js_reverse.views.urls_js', name='js_reverse')
+
 )
 
 if settings.DEBUG:

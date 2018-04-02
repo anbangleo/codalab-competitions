@@ -49,9 +49,9 @@ from apps.coopetitions.models import Like, Dislike
 from apps.forums.models import Forum
 from apps.common.competition_utils import get_most_popular_competitions, get_featured_competitions
 from apps.web.exceptions import ScoringException
-from apps.web.forms import CompetitionS3UploadForm, SubmissionS3UploadForm
+from apps.web.forms import CompetitionS3UploadForm, SubmissionS3UploadForm,DocumentForm
 from apps.web.models import SubmissionScore, SubmissionScoreDef, get_current_phase, \
-    get_first_previous_active_and_next_phases
+    get_first_previous_active_and_next_phases, Document
 
 from tasks import evaluate_submission, re_run_all_submissions_in_phase, create_competition, _make_url_sassy, \
     make_modified_bundle
@@ -1956,3 +1956,28 @@ class CompetitionDumpDeleteView(DeleteView):
     def get_success_url(self):
         dump = self.object
         return reverse('competitions:dumps', kwargs={'competition_pk': dump.competition.pk})
+
+## DeveloperLab
+@login_required
+def developerlab(request):
+    # Handle file upload
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            newdoc = Document(docfile = request.FILES['docfile'])
+            newdoc.save()
+
+            # Redirect to the document list after POST
+            return HttpResponseRedirect(reverse('developerlab'))
+    else:
+        form = DocumentForm() # A empty, unbound form
+
+    # Load documents for the list page
+    documentss = Document.objects.all()
+
+    # Render list page with the documents and the form
+    return render_to_response(
+        'web/my/developerlab.html',
+        {'documentss': documentss, 'form': form},
+        context_instance=RequestContext(request)
+    )

@@ -20,6 +20,10 @@ from apps.web.tasks import _make_url_sassy
 
 User = get_user_model()
 
+class DocumentForm(forms.Form):
+    docfile = forms.FileField(
+        label='Select a file'
+    )
 
 class CompetitionForm(forms.ModelForm):
     class Meta:

@@ -659,6 +659,7 @@ class DevBase(Base):
         EXTRA_MIDDLEWARE_CLASSES = (
             'debug_toolbar.middleware.DebugToolbarMiddleware',
         )
+        
 
         DEBUG_TOOLBAR_CONFIG = {
             'SHOW_TEMPLATE_CONTEXT': True,
