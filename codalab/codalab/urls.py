@@ -21,7 +21,7 @@ urlpatterns = patterns('',
     url(r'^teams/', include('apps.teams.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    #url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
     url(r'^hidden-admin/', include(admin.site.urls)),
 

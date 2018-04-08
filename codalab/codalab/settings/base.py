@@ -37,6 +37,7 @@ class Base(Settings):
     DOMAIN_NAME = 'localhost'
     SERVER_NAME = 'localhost'
     DEBUG = os.environ.get('DEBUG', False)
+    #DEBUG = False
     TEMPLATE_DEBUG = DEBUG
     COMPILE_LESS = True  # is the less -> css already done or would you like less.js to compile it on render
     LOCAL_MATHJAX = False  # see prep_for_offline
@@ -122,6 +123,7 @@ class Base(Settings):
     # Absolute filesystem path to the directory that will hold user-uploaded files.
     # Example: "/var/www/example.com/media/"
     MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
+    #MEDIA_ROOT = '/app/codalab/media'
 
     # URL that handles the media served from MEDIA_ROOT. Make sure to use a
     # trailing slash.
@@ -659,7 +661,6 @@ class DevBase(Base):
         EXTRA_MIDDLEWARE_CLASSES = (
             'debug_toolbar.middleware.DebugToolbarMiddleware',
         )
-        
 
         DEBUG_TOOLBAR_CONFIG = {
             'SHOW_TEMPLATE_CONTEXT': True,

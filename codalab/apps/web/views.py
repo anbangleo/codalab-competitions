@@ -71,6 +71,15 @@ except ImportError:
 
 User = get_user_model()
 
+
+iftrain = 0
+iftest = 0
+ifunlabel = 0
+ifdataset = 0
+numofdataset = 0
+numofunlabel = 0
+ifzip = 0
+
 ############################################################
 # General: template views
 
@@ -1961,23 +1970,88 @@ class CompetitionDumpDeleteView(DeleteView):
 @login_required
 def developerlab(request):
     # Handle file upload
+    global iftrain
+    global iftest
+    global ifunlabel
+    global ifdataset
+    global numofdataset
+    global numofunlabel
+    global ifzip
+
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
+
         if form.is_valid():
-            newdoc = Document(docfile = request.FILES['docfile'])
-            newdoc.save()
+            docfile = request.FILES['docfile']
+            if docfile.name.split('/')[-1].split('.')[-1]=='zip':
+                iftrain=0
+                iftest=0
+                ifunlabel=0
+                ifdataset=0
+                numofdataset=0
+                numofunlabel=0
+                ifzip = 1 # 0 is none, 1 is valid, 2 is wrong
+                ziplist = zipfile.ZipFile(docfile)
+
+
+                unlabeldataset = list(filter(lambda x: '/' in x , ziplist.namelist()))
+                numofdataset = len(unlabeldataset)
+
+                expunlabeldataset = list(filter(lambda x: '/' not in x , ziplist.namelist()))
+
+                if numofdataset>0:
+                    ifdataset = 1
+                if 'train.txt' in expunlabeldataset:
+                    iftrain = 1
+                if 'unlabel.txt' in expunlabeldataset:
+                    fileunlabel = ziplist.read('unlabel.txt').decode('utf-8')
+                    numofunlabel = fileunlabel.count('\n')+1
+                    ifunlabel = 1
+
+                if 'test.txt' in expunlabeldataset:
+                    iftest = 1
+                if iftrain==1 and ifunlabel==1:
+                    newdoc = Document(docfile = request.FILES['docfile'])
+                    newdoc.creator = request.user
+                    newdoc.save()
+                else:
+                    ifzip = 2
+                    return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel})
+            else:
+                ifzip = 2
+                return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'ifzip':ifzip})
+
 
             # Redirect to the document list after POST
-            return HttpResponseRedirect(reverse('developerlab'))
+            return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
     else:
         form = DocumentForm() # A empty, unbound form
 
     # Load documents for the list page
     documentss = Document.objects.all()
 
-    # Render list page with the documents and the form
+    documentss = documentss.filter(creator=request.user)
+
     return render_to_response(
         'web/my/developerlab.html',
-        {'documentss': documentss, 'form': form},
+        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel},
         context_instance=RequestContext(request)
     )
+
+
+
+
+   # class MyCompetitionsEnteredPartial(ListView):
+    #    model = models.CompetitionParticipant
+     #   template_name = 'web/my/_entered.html'
+      #  queryset = models.CompetitionParticipant.objects.all()
+  #
+       # def get_queryset(self):
+        #    return self.queryset.filter(user=self.request.user)
+        #
+         #   submission = models.CompetitionSubmission.objects.get(pk=submission_pk)
+          #      if submission.participant.user != request.user:
+           #         raise Http404()
+            #    submission.description = request.POST.get('updated_description')
+             #   submission.save()
+              #  return HttpResponse()
