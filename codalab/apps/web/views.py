@@ -61,6 +61,8 @@ from extra_views import UpdateWithInlinesView, InlineFormSet, NamedFormsetsMixin
 
 from .utils import check_bad_scores
 
+from binaryclass import BinaryClassTest
+
 try:
     import azure
     import azure.storage
@@ -1967,6 +1969,8 @@ class CompetitionDumpDeleteView(DeleteView):
         return reverse('competitions:dumps', kwargs={'competition_pk': dump.competition.pk})
 
 ## DeveloperLab
+di = {}
+
 @login_required
 def developerlab(request):
     # Handle file upload
@@ -1977,6 +1981,8 @@ def developerlab(request):
     global numofdataset
     global numofunlabel
     global ifzip
+    global di
+
 
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
@@ -1990,11 +1996,12 @@ def developerlab(request):
                 ifdataset=0
                 numofdataset=0
                 numofunlabel=0
+                di = {}
                 ifzip = 1 # 0 is none, 1 is valid, 2 is wrong
                 ziplist = zipfile.ZipFile(docfile)
 
 
-                unlabeldataset = list(filter(lambda x: '/' in x , ziplist.namelist()))
+                unlabeldataset = list(filter(lambda x: '/' in x , ziplist.namelist()))#
                 numofdataset = len(unlabeldataset)
 
                 expunlabeldataset = list(filter(lambda x: '/' not in x , ziplist.namelist()))
@@ -2011,19 +2018,22 @@ def developerlab(request):
                 if 'test.txt' in expunlabeldataset:
                     iftest = 1
                 if iftrain==1 and ifunlabel==1:
+                    binary = BinaryClassTest()
+                    di = binary.maintodo('train.txt','unlabel.txt','test.txt',unlabeldataset,5,1,9,1,docfile,str(request.user))
                     newdoc = Document(docfile = request.FILES['docfile'])
                     newdoc.creator = request.user
                     newdoc.save()
+                    # return HttpResponseRedirect(reverse('developerlab'),{'di':di})
                 else:
                     ifzip = 2
-                    return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel})
+                    # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'di':di})
             else:
                 ifzip = 2
-                return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'ifzip':ifzip})
+                # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'ifzip':ifzip,'di':di})
 
 
             # Redirect to the document list after POST
-            return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
+            return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di})
     else:
         form = DocumentForm() # A empty, unbound form
 
@@ -2034,24 +2044,15 @@ def developerlab(request):
 
     return render_to_response(
         'web/my/developerlab.html',
-        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel},
+        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di},
         context_instance=RequestContext(request)
     )
 
 
-
-
-   # class MyCompetitionsEnteredPartial(ListView):
-    #    model = models.CompetitionParticipant
-     #   template_name = 'web/my/_entered.html'
-      #  queryset = models.CompetitionParticipant.objects.all()
-  #
-       # def get_queryset(self):
-        #    return self.queryset.filter(user=self.request.user)
-        #
-         #   submission = models.CompetitionSubmission.objects.get(pk=submission_pk)
-          #      if submission.participant.user != request.user:
-           #         raise Http404()
-            #    submission.description = request.POST.get('updated_description')
-             #   submission.save()
-              #  return HttpResponse()
+def developerlab1(request):
+    ifzip=2
+    return render_to_response(
+        'web/my/developerlab.html',
+        {'ifzip':ifzip},
+        context_instance=RequestContext(request)
+    )
