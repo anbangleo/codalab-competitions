@@ -9,12 +9,32 @@
 
 <h2>{{ user.username }}</h2>
 {% block content %}
+<!--<script type="text/javascript">-->
+    <!--function myCheck1()-->
+    <!--{-->
+        <!--alert("hello");-->
+        <!--uploadfile.submit();-->
+    <!--}-->
+    <!--function myCheck2()-->
+    <!--{-->
+<!--//        if(form2.text2.value=="")-->
+<!--//        {-->
+<!--//            alert("内容不能为空,请输入内容");-->
+<!--//            form2.text2.focus();-->
+<!--//            return ;-->
+<!--//        }-->
+        <!--alert("world");-->
+        <!--uploadmethod.submit();-->
+    <!--}-->
+<!--</script>-->
+
 <div class="row">
     <div class="col-sm-12">
         <table class="table table-striped ">
             <tr>
                 <th>提交文件</th>
                 <td>
+                    <p>kind:{{kind}}</p>
                     {% if documentss %}
                     <ul>
                         {% for document in documentss %}
@@ -25,7 +45,7 @@
                     <p>No documents.</p>
                     {% endif %}
                     <!-- Upload form. Note enctype attribute! -->
-                    <form action="{% url 'developerlab_upload' %}" method="post" enctype="multipart/form-data">
+                    <form action="{% url 'developerlab_upload' %}" name="uploadfile" id= "uploadfile1" method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         <p>{{ form.non_field_errors }}</p>
                         <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
@@ -33,29 +53,29 @@
                             {{ form.docfile.errors }}
                             {{ form.docfile }}
                         </p>
-                        <p><input type="submit" value="上传文件" ></p>
+                        <p><input type="submit" name="uploadfile" value="上传文件"></p>
                     </form>
                     <p>上传的压缩包文件格式，请参照</p>
                     </td>
-                </tr>
+            </tr>
 
-            <form action="{% url 'developerlab1' %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'developerlab_do' %}" name="uploadmethod" id= "uploadfile2" method="post" enctype="multipart/form-data">
             {% csrf_token %}
 
             <tr>
                 <th align="right">样本类别</th>
-                <td align="left"><input type="radio" name = "kind" checked>文本</td>
+                <td align="left"><input type="radio" name = "kind" value = "text" checked>文本</td>
             </tr>
             <tr>
                 <th>算法选择</th>
-                <td align="left"><input type="radio" name = "alg" checked>二元分类
-                    <input type="radio" name = "alg" >多元分类
+                <td align="left"><input type="radio" name = "alg" value = "binary" checked>二元分类
+                    <input type="radio" name = "alg" value = "multilabel">多元分类
                     <!--<input type="radio" name = "alg" >多标签</td>-->
             </tr>
             <tr>
                 <th>策略选择</th>
-                <td align="left"><input type="radio" name = "strategy" checked>不确定采样法(Uncertainty Sampling)
-                    <input type="radio" name = "strategy" >委员会问询法(Query By Committee)
+                <td align="left"><input type="radio" name = "strategy" value = "us" checked>不确定采样法(Uncertainty Sampling)
+                    <input type="radio" name = "strategy" value = "qbc">委员会问询法(Query By Committee)
                     <!--<input type="radio" name = "strategy" >自动选择最优算法-->
                 </td>
             </tr>
@@ -81,11 +101,11 @@
                                 </tr>
                             <tr>
                                 <th>标注方式</th>
-                                <td align="left"><input type="radio" name = "markmethod" checked>返回需标注的实例名称
+                                <td align="left"><input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
                                 {% if ifdataset == 1 %}
-                                    <input type="radio" name = "markmethod" >发往交互平台众包标注
+                                    <input type="radio" name = "markmethod" value = "sendtoBMT" >发往交互平台众包标注
                                     {% endif %}
-                                <p><input type="submit" value="确认执行" ></p>
+                    <p><input type="submit" name="uploadmethod" value="确认执行"></p>
             </form>
                          <!--如果是压缩包，但缺少文件-->
                         {% else %}
@@ -102,7 +122,12 @@
                                 </td>
 
                              </tr>
-
+            <tr>
+                <th>测试样例</th>
+                <td>{{docfilecopy}}
+                    {{kind}}
+                </td>
+            </tr>
 
             <tr>
                 <th>执行结果</th>

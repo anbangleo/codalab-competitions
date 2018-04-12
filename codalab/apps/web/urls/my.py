@@ -45,6 +45,6 @@ urlpatterns = patterns(
     # User settings
     url(r'^settings/', views.UserSettingsView.as_view(), name='user_settings'),
     url(r'^developerlab/', views.developerlab, name='developerlab_upload'),
-    url(r'^developerlab/', views.developerlab1, name='developerlab1'),
+    #url(r'^developerlab/', views.developerlab_do, name='developerlab_do'),
 
 )

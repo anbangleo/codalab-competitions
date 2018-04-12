@@ -129,7 +129,7 @@ class BinaryClassTest(object):
         SIZE = 1024
         jsontosend = {}
         jsontosend['filedir'] = filedir
-        jsontosend['filetype'] = 1 # 1 means text, 2 means image
+        jsontosend['filetype'] = filetype # 1 means text, 2 means image
         jsontosend['creator'] = username
         jsontosend['numbersneedtobemarked'] = numneedtobemarked
         jsontosend['createtime'] = str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
@@ -205,67 +205,50 @@ class BinaryClassTest(object):
         #qs2 = RandomSampling(trn_ds2)
 
         model = LogisticRegression()
-
-
-        # model.train(trn_ds)
-        # E_out1 = np.append(E_out1, 1 - model.score(tst_ds))
-        # model.train(trn_ds2)
-        # E_out2 = np.append(E_out2, 1 - model.score(tst_ds))
-
-        # query_num = np.arange(0, 1)
-        # p1, = ax.plot(query_num, E_out1, 'g', label='qs Eout')
-        # p2, = ax.plot(query_num, E_out2, 'k', label='random Eout')
-        # plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True,
-        #            shadow=True, ncol=5)
-        # plt.show(block=False)
-
-
-        # print ("Label 0 for Ham, Label 1 for Spam")
-        # interlabel = ['0','1']
-        # lbr = InteractiveLabeler(label_name = interlabel)
-        # 
         
         lbr = IdealLabeler(real_trn_ds)#TODO: trn_ds+test_ds to improve
 
+        if pushallask == 1:
+            for i in range(quota):
+                ask_id = qs.make_query()
+                filename = unlabelnames[ask_id-numoftrain]
 
-        
-        for i in range(quota):
-            ask_id = qs.make_query()
-            filename = unlabelnames[ask_id-numoftrain]
-            if filename.split('/')[-1] in unlabeldatasetdir:
-                #filebody = zipfile.ZipFile(docfile).read(traintext).decode('utf-8')
-                #unlabeldict[filename] = filebody
-                filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
-                with open(filenamefull) as f:
-                    filebody = f.read()
-                    unlabeldict[filenamefull] = filebody
-            # print trn_ds.data
-            # print trn_ds.data[ask_id]
+                X,i = zip(*trn_ds.data)
+
+                lb = lbr.label(X[ask_id-numoftrain])
+                trn_ds.update(ask_id, lb)
+                model.train(trn_ds)
+                askidlist.append(filename)
+            return askidlist
+
+        #向标注平台发送
+        else:
+            for i in range(quota):
+                ask_id = qs.make_query()
+                filename = unlabelnames[ask_id-numoftrain]
+                if filename.split('/')[-1] in unlabeldatasetdir:
+                    #filebody = zipfile.ZipFile(docfile).read(traintext).decode('utf-8')
+                    #unlabeldict[filename] = filebody
+                    filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
+                    with open(filenamefull) as f:
+                        filebody = f.read()
+                        unlabeldict[filename] = filebody
+
             X,i = zip(*trn_ds.data)
-            # lb = lbr.label(trn_ds.data[ask_id][0])
-            # print len(i)
 
-        
             lb = lbr.label(X[ask_id-numoftrain])
             trn_ds.update(ask_id, lb)
             model.train(trn_ds)
-            # with open(filename) as f:
-            #     print f.read()
-            
-        csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
-        with open(csvdir, 'wb') as csv_file:
-            writer = csv.writer(csv_file)
-            for key, value in unlabeldict.items():
-                askidlist.append(key)
-                writer.writerow([key, value])
-        #(filedir,filetype,username,numneedtobemarked)
-        #self.sendfile(csvdir,1,username,quota)
 
-        # for keys,values in unlabeldict.items():
-        #     p.writelines(keys+'\n')
-        #     p.writelines(values+'\n')
-        return askidlist
-
+            csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
+            with open(csvdir, 'wb') as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerow(['name','entity'])
+                for key, value in unlabeldict.items():
+                    askidlist.append(key)
+                    writer.writerow([key, value])
+            #self.sendfile(csvdir,1,username,quota)
+            return askidlist
 
 
 
