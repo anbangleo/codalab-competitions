@@ -1,3 +1,4 @@
+# coding=utf-8
 import csv
 import urllib
 from datetime import datetime, timedelta
@@ -9,6 +10,7 @@ import sys
 import traceback
 import yaml
 import zipfile
+import copy
 
 from decimal import Decimal
 from yaml.representer import SafeRepresenter
@@ -1971,7 +1973,7 @@ class CompetitionDumpDeleteView(DeleteView):
 ## DeveloperLab
 di = {}
 
-
+docfilecopy = ''
 @login_required
 def developerlab(request):
     # Handle file upload
@@ -1983,114 +1985,123 @@ def developerlab(request):
     global numofunlabel
     global ifzip
     global di
-
+    global docfilecopy
 
     if request.method == 'POST':
-        form = DocumentForm(request.POST, request.FILES)
 
-        if form.is_valid():
-            docfile = request.FILES['docfile']
-            #docifilecopy =
-            if docfile.name.split('/')[-1].split('.')[-1]=='zip':
-                iftrain=0
-                iftest=0
-                ifunlabel=0
-                ifdataset=0
-                numofdataset=0
-                numofunlabel=0
-                ifzip = 1 # 0 is none, 1 is valid, 2 is wrong
-                ziplist = zipfile.ZipFile(docfile)
+        submit = request.POST.get('uploadfile',None)
+        if submit:
+            form = DocumentForm(request.POST, request.FILES)
+            if form.is_valid():
+                docfile = request.FILES['docfile']
+                with open('/app/codalab/thirdpart/'+str(request.user)+'/docfile.zip', 'wb+') as destination:
+                    for chunk in docfile.chunks():
+                        destination.write(chunk)
+
+                if docfile.name.split('/')[-1].split('.')[-1]=='zip':
+                    iftrain=0
+                    iftest=0
+                    ifunlabel=0
+                    ifdataset=0
+                    numofdataset=0
+                    numofunlabel=0
+                    ifzip = 1 # 0 is none, 1 is valid, 2 is wrong
+                    ziplist = zipfile.ZipFile(docfile)
 
 
-                unlabeldataset = list(filter(lambda x: '/' in x , ziplist.namelist()))#
-                numofdataset = len(unlabeldataset)
+                    unlabeldataset = list(filter(lambda x: '/' in x , ziplist.namelist()))#
+                    numofdataset = len(unlabeldataset)
 
-                expunlabeldataset = list(filter(lambda x: '/' not in x , ziplist.namelist()))
+                    expunlabeldataset = list(filter(lambda x: '/' not in x , ziplist.namelist()))
 
-                if numofdataset>0:
-                    ifdataset = 1
-                if 'train.txt' in expunlabeldataset:
-                    iftrain = 1
-                if 'unlabel.txt' in expunlabeldataset:
-                    fileunlabel = ziplist.read('unlabel.txt').decode('utf-8')
-                    numofunlabel = fileunlabel.count('\n')+1
-                    ifunlabel = 1
+                    if numofdataset>0:
+                        ifdataset = 1
+                    if 'train.txt' in expunlabeldataset:
+                        iftrain = 1
+                    if 'unlabel.txt' in expunlabeldataset:
+                        fileunlabel = ziplist.read('unlabel.txt').decode('utf-8')
+                        numofunlabel = fileunlabel.count('\n')+1
+                        ifunlabel = 1
 
-                if 'test.txt' in expunlabeldataset:
-                    iftest = 1
-                if iftrain==1 and ifunlabel==1:
-                    #binary = BinaryClassTest()
-                    #di = binary.maintodo('train.txt','unlabel.txt','test.txt',unlabeldataset,5,1,9,1,docfile,str(request.user))
-                    newdoc = Document(docfile = request.FILES['docfile'])
-                    newdoc.creator = request.user
-                    newdoc.save()
-                    # return HttpResponseRedirect(reverse('developerlab'),{'di':di})
+                    if 'test.txt' in expunlabeldataset:
+                        iftest = 1
+                    if iftrain==1 and ifunlabel==1:
+                        #binary = BinaryClassTest()
+                        #di = binary.maintodo('train.txt','unlabel.txt','test.txt',unlabeldataset,5,1,9,1,docfile,str(request.user))
+                        newdoc = Document(docfile = request.FILES['docfile'])
+                        newdoc.creator = request.user
+                        newdoc.save()
+                        # return HttpResponseRedirect(reverse('developerlab'),{'di':di})
+                    else:
+                        ifzip = 2
+                        # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'di':di})
                 else:
                     ifzip = 2
-                    # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'di':di})
+                    # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'ifzip':ifzip})
+
+
+                # Redirect to the document list after POST
+                return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
+        else:
+            #doclist = list(Document.objects.filter(creator = request.user))
+            #docfilecopy = Document.objects.filter(creator = request.user)[len(doclist)-1]['docfile']
+            docfilecopy = '/app/codalab/thirdpart/'+str(request.user)+'/docfile.zip'
+            #documentss = Document.objects.all()
+            #documentss = documentss.filter(creator=request.user)
+
+            if request.method == 'GET':
+                return HttpResponseRedirect(reverse('developerlab_upload'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy})
+            elif request.method == 'POST':
+                di = {}
+                kind = request.POST.get('kind')#text,image
+                alg = request.POST.get('alg')#binary,multilabel
+                strategy = request.POST.get('strategy')#us,qbc
+                testsize = request.POST.get('testsize')
+                numneedtobelabeled = int(request.POST.get('numneedtobelabeled'))
+                markmethod = request.POST.get('markmethod')#returnentities, sendtoBMT
+
+                if not testsize:
+                    trainandtest = 1
+                else:
+                    testsize = float(testsize)
+                    testsizeerror = "验证集比例设置异常，请校验后输入【0-1之间的浮点数】"
+
+                    if testsize>1 or testsize<0:
+                        return HttpResponseRedirect(reverse('developerlab_upload'),{'testsizeerror':testsizeerror})
+                    else:
+                        trainandtest = 0
+
+                if markmethod == 'returnentities':
+                    markmethod = 1
+                    binary = BinaryClassTest()
+                    #numneedtobelabeled, trainandDataset, testsize,
+
+                    di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind})
+
+                else:
+                    markmethod = 0
+                    binary = BinaryClassTest()
+                    #numneedtobelabeled, trainandDataset, testsize, markmethod
+                    di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
             else:
-                ifzip = 2
-                # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'ifzip':ifzip})
+                return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
 
-
-            # Redirect to the document list after POST
-            return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
+            return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
     else:
         form = DocumentForm() # A empty, unbound form
 
     # Load documents for the list page
-    documentss = Document.objects.all()
-    doclist = list(Document.objects.all())
-    documentss = documentss.filter(creator=request.user)
+    #documentss = Document.objects.all()
+    doclist = list(Document.objects.filter(creator=request.user))
+    documentss = Document.objects.filter(creator=request.user)
     if(len(doclist)>10):
         documentss = documentss.filter(creator = request.user)[len(doclist)-10:len(doclist)]
     else:
         documentss = documentss.filter(creator=request.user)
     return render_to_response(
         'web/my/developerlab.html',
-        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel},
-        context_instance=RequestContext(request)
-    )
-
-@login_required
-def developerlab_do(request):
-    doclist = list(Document.objects.all())
-    #docfilecopy = Document.objects.filter(creator = request.user)[len(doclist)]
-    documentss = Document.objects.all()
-    documentss = documentss.filter(creator=request.user)
-    kind = 'ccc'
-    print kind
-    di = {}
-    if request.method == 'GET':
-        return HttpResponseRedirect(reverse('developerlab_do'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy,'kind':kind})
-    elif request.method == 'POST':
-        kind = request.POST.get('kind')#text,image
-        alg = request.POST.get('alg')#binary,multilabel
-        strategy = request.POST.get('strategy')#us,qbc
-        testsize = request.POST.get('testsize')
-        numneedtobelabeled = request.POST.get('numneedtobelabeled')
-        markmethod = request.POST.get('markmethod')#returnentities, sendtoBMT
-        if markmethod == returnentities:
-            markmethod = 1
-            numneedtobelabeled = 5
-            binary = BinaryClassTest()
-            #numneedtobelabeled, trainandDataset, testsize, markmethod
-            di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,9,markmethod,docfilecopy,str(request.user))
-            return HttpResponseRedirect(reverse('developerlab_do'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy,'kind':kind})
-
-        else:
-            markmethod = 0
-            numneedtobelabeled = 5
-            binary = BinaryClassTest()
-            #numneedtobelabeled, trainandDataset, testsize, markmethod
-            di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,9,markmethod,docfilecopy,str(request.user))
-            return HttpResponseRedirect(reverse('developerlab_do'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy,'kind':kind})
-    else:
-        return HttpResponseRedirect(reverse('developerlab_do'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy,'kind':kind})
-
-    kind = 'ccc'
-    return render_to_response(
-        'web/my/developerlab.html',
-        {'documentss':documentss,'di':di,'docfilecopy':docfilecopy,'kind':kind},
+        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di},
         context_instance=RequestContext(request)
     )

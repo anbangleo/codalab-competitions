@@ -27,14 +27,23 @@
         <!--uploadmethod.submit();-->
     <!--}-->
 <!--</script>-->
+<script type="text/javascript">
+    function display_alert()
+    {
+        alert("验证集比例异常！")
+    }
+</script>
 
 <div class="row">
     <div class="col-sm-12">
         <table class="table table-striped ">
+            {% if testsizeerror %}
+            display_alert()
+            {% endif %}
             <tr>
                 <th>提交文件</th>
                 <td>
-                    <p>kind:{{kind}}</p>
+                    <p>当前最多支持展示最近上传的十个文件</p>
                     {% if documentss %}
                     <ul>
                         {% for document in documentss %}
@@ -54,13 +63,10 @@
                             {{ form.docfile }}
                         </p>
                         <p><input type="submit" name="uploadfile" value="上传文件"></p>
-                    </form>
                     <p>上传的压缩包文件格式，请参照</p>
                     </td>
             </tr>
 
-            <form action="{% url 'developerlab_do' %}" name="uploadmethod" id= "uploadfile2" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
 
             <tr>
                 <th align="right">样本类别</th>
@@ -122,12 +128,6 @@
                                 </td>
 
                              </tr>
-            <tr>
-                <th>测试样例</th>
-                <td>{{docfilecopy}}
-                    {{kind}}
-                </td>
-            </tr>
 
             <tr>
                 <th>执行结果</th>

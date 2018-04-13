@@ -86,9 +86,6 @@ class BinaryClassTest(object):
 
 
     def split_train_test (self, localdir, test_size):
-        # dataset_train = os.path.join(
-        #     os.path.dirname(os.path.realpath(__file__)), localdir)
-        # dataset_train = zipfile.ZipFile(docfile).read(localdir).decode('utf-8')
         dataset_train = localdir
         x, y = import_libsvm_sparse(dataset_train).format_sklearn()
         X_train, X_test, label_train, label_test = train_test_split(x, y, test_size=test_size)
@@ -98,9 +95,7 @@ class BinaryClassTest(object):
         return X_train,label_train,test_ds
 
     def split_train_test_unlabel(self, train, trainlabel, unlabeltext):
-        # dataset_unlabel = os.path.join(
-        #     os.path.dirname(os.path.realpath(__file__)), unlabeltext)
-        # dataset_unlabel = zipfile.ZipFile(docfile).read(unlabeltext).decode('utf-8')
+
         dataset_unlabel = unlabeltext
         #原训练集
         numoftrain = len(train)
@@ -167,7 +162,6 @@ class BinaryClassTest(object):
         unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ unlabelentity
         testentity = '/app/codalab/thirdpart/'+username+'/'+ testentity
         #[Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
-        # quota = 5  
         #1是提交的两个文件，一个训练集一个测试集。
         # trainAndtest = 1
         # testsize = 0.33
@@ -183,24 +177,20 @@ class BinaryClassTest(object):
         unlabeldatasetdir = os.listdir(unlabeldatasetdir)
         p = open('/app/codalab/thirdpart/test1.txt','w')
         # E_out1, E_out2 = [], []
-        # traintest,testtest,ytest,fullytest = split_train_test_origin('99.txt',test_size = 0.33, n_labeled=5)
         unlabeldict = {}
 
         #[Todo]:提交的是Train还是Train+Test
         if trainAndtest == 1:
-            # print trainentity
-            # print unlabelentity
             trn_ds,numoftrain,unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
             tst_ds = self.split_onlytest(testentity)
         else:
             #[Todo]:提交的只有一个Train
             trn, trn_label, tst_ds = self.split_train_test(trainentity,testsize)
             trn_ds,numoftrain,unlabelnames = self.split_train_test_unlabel(trn, trn_label, unlabelentity)
+            real_trn_ds = copy.deepcopy(trn_ds)
 
 
         # trn_ds2 = copy.deepcopy(trn_ds)
-
-
         qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
         #qs2 = RandomSampling(trn_ds2)
 
@@ -234,18 +224,19 @@ class BinaryClassTest(object):
                         filebody = f.read()
                         unlabeldict[filename] = filebody
 
-            X,i = zip(*trn_ds.data)
+                X,i = zip(*trn_ds.data)
 
-            lb = lbr.label(X[ask_id-numoftrain])
-            trn_ds.update(ask_id, lb)
-            model.train(trn_ds)
+                lb = lbr.label(X[ask_id-numoftrain])
+                trn_ds.update(ask_id, lb)
+                model.train(trn_ds)
+                askidlist.append(filename)
 
             csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
             with open(csvdir, 'wb') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerow(['name','entity'])
                 for key, value in unlabeldict.items():
-                    askidlist.append(key)
+                    #askidlist.append(key)
                     writer.writerow([key, value])
             #self.sendfile(csvdir,1,username,quota)
             return askidlist
