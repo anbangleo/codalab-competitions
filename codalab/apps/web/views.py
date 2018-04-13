@@ -1974,6 +1974,7 @@ class CompetitionDumpDeleteView(DeleteView):
 di = {}
 
 docfilecopy = ''
+ifsendtoBMT = 0
 @login_required
 def developerlab(request):
     # Handle file upload
@@ -1986,6 +1987,7 @@ def developerlab(request):
     global ifzip
     global di
     global docfilecopy
+    global ifsendtoBMT
 
     if request.method == 'POST':
 
@@ -2053,6 +2055,7 @@ def developerlab(request):
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy})
             elif request.method == 'POST':
                 di = {}
+                ifsenttoBMT = 0
                 kind = request.POST.get('kind')#text,image
                 alg = request.POST.get('alg')#binary,multilabel
                 strategy = request.POST.get('strategy')#us,qbc
@@ -2073,6 +2076,7 @@ def developerlab(request):
 
                 if markmethod == 'returnentities':
                     markmethod = 1
+                    ifsendtoBMT = 0
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandDataset, testsize,
 
@@ -2081,10 +2085,11 @@ def developerlab(request):
 
                 else:
                     markmethod = 0
+                    ifsendtoBMT = 1
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandDataset, testsize, markmethod
                     di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
-                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
+                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT})
             else:
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
 
@@ -2102,6 +2107,7 @@ def developerlab(request):
         documentss = documentss.filter(creator=request.user)
     return render_to_response(
         'web/my/developerlab.html',
-        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di},
+        {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset,'ifsendtoBMT':ifsendtoBMT,
+         'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di},
         context_instance=RequestContext(request)
     )
