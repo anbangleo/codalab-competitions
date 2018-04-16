@@ -34,55 +34,87 @@
     }
 </script>
 
+<script>
+    $(document).ready(function() {
+        $("#binary").click(function () {
+            $("#algforbinary").show();
+            $("#algformulticlass").hide();
+
+        });
+        $("#multiclass").click(function () {
+//            alert("hello!");
+            $("#algforbinary").hide();
+            $("#algformulticlass").show();
+        });
+    });
+
+</script>
+
 <div class="row">
     <div class="col-sm-12">
         <table class="table table-striped ">
-            {% if testsizeerror %}
-            display_alert()
-            {% endif %}
+            <!--{% if testsizeerror %}-->
+            <!--display_alert()-->
+            <!--{% endif %}-->
             <tr>
-                <th>提交文件</th>
-                <td>
-                    <p>当前最多支持展示最近上传的十个文件</p>
-                    {% if documentss %}
-                    <ul>
-                        {% for document in documentss %}
-                        <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a></li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p>No documents.</p>
-                    {% endif %}
-                    <!-- Upload form. Note enctype attribute! -->
-                    <form action="{% url 'developerlab_upload' %}" name="uploadfile" id= "uploadfile1" method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <p>{{ form.non_field_errors }}</p>
-                        <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
-                        <p>
-                            {{ form.docfile.errors }}
-                            {{ form.docfile }}
-                        </p>
-                        <p><input type="submit" name="uploadfile" value="上传文件"></p>
-                    <p>上传的压缩包文件格式，请参照</p>
+                <th align="right">提交文件</th>
+                    <td align="left">
+                        <p>当前最多支持展示最近上传的十个文件</p>
+                        {% if documentss %}
+                        <ul>
+                            {% for document in documentss %}
+                            <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No documents.</p>
+                        {% endif %}
+                        <!-- Upload form. Note enctype attribute! -->
+                            <form action="{% url 'developerlab_upload' %}" name="uploadfile" id= "uploadfile1" method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <p>{{ form.non_field_errors }}</p>
+                                <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
+                                <p>
+                                    {{ form.docfile.errors }}
+                                    {{ form.docfile }}
+                                </p>
+                                <p><input type="submit" name="uploadfile" value="上传文件"></p>
+                            <p>上传的压缩包文件格式，请参照</p>
                     </td>
             </tr>
 
-
             <tr>
+
                 <th align="right">样本类别</th>
-                <td align="left"><input type="radio" name = "kind" value = "text" checked>文本</td>
+                <td align="left"><input type="radio" name = "kind" value = "text" checked>文本
+                                    <input type="radio" name = "kind" value = "image" >图片</td>
             </tr>
             <tr>
-                <th>算法选择</th>
-                <td align="left"><input type="radio" name = "alg" value = "binary" checked>二元分类
-                    <input type="radio" name = "alg" value = "multilabel">多元分类
-                    <!--<input type="radio" name = "alg" >多标签</td>-->
+
+                <th align="right">模型选择</th>
+                <td align="left"><input type="radio" name = "model" value = "logic" checked>逻辑回归
+                <input type="radio" name = "model" value = "svm">支持向量机</td>
             </tr>
             <tr>
                 <th>策略选择</th>
-                <td align="left"><input type="radio" name = "strategy" value = "us" checked>不确定采样法(Uncertainty Sampling)
-                    <input type="radio" name = "strategy" value = "qbc">委员会问询法(Query By Committee)
-                    <!--<input type="radio" name = "strategy" >自动选择最优算法-->
+                <td align="left"><input type="radio" name = "strategy" value = "binary" id="binary" checked>二元分类（Binary-Class）
+                    <input type="radio" name = "strategy" value = "multiclass" id="multiclass">多元分类(Multi-Class)
+                    <input type="radio" name = "strategy" value = "multilabel" id="multilabel">多标签分类(Multi-Label)</td>
+                    <!--<input type="radio" name = "alg" >多标签</td>-->
+            </tr>
+            <tr>
+                <th>算法选择</th>
+                <td align="left">
+                <div id="algforbinary">
+                    <input type="radio" name = "alg" value = "us" checked>不确定采样法(Uncertainty Sampling)
+                    <input type="radio" name = "alg" value = "qbc">委员会问询法(Query By Committee)
+                        <!--<input type="radio" name = "strategy" >自动选择最优算法-->
+                </div>
+
+                <div id="algformulticlass" style="display: none;">
+                    <input type="radio" name = "alg" value = "us" >不确定采样法(Uncertainty Sampling)
+
+                </div>
                 </td>
             </tr>
 
@@ -93,7 +125,7 @@
                             {% if iftest == 0 %}
                                  <tr>
                                      <th>验证集比例</th>
-                                    <td><input type = "text" name = "testsize">系统并未检测到验证集，请设置验证集比例。范围0.00-1.00，建议值0.2-0.4</td>
+                                    <td><input type = "text" id="idtestsize" name = "testsize">系统并未检测到验证集，请设置验证集比例。范围0.00-1.00，建议值0.2-0.4</td>
                                 </tr>
                             {% else %}
                                 <tr>
@@ -103,16 +135,23 @@
                             {% endif %}
                                 <tr>
                                     <th>标记实例个数</th>
-                                    <td><input type = "text" name = "numneedtobelabeled">1-{{numofunlabel}}个。系统共检测到{{numofunlabel}}未标注实例。</td>
+                                    <td><input type = "text" id="idnumneedtobelabeled" name = "numneedtobelabeled">1-{{numofunlabel}}个。系统共检测到{{numofunlabel}}未标注实例。</td>
                                 </tr>
+
                             <tr>
                                 <th>标注方式</th>
-                                <td align="left"><input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
+                                <td align="left">
                                 {% if ifdataset == 1 %}
+                                <input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
                                     <input type="radio" name = "markmethod" value = "sendtoBMT" >发往交互平台众包标注
-                                    {% endif %}
-                    <p><input type="submit" name="uploadmethod" value="确认执行"></p>
-            </form>
+                                {% else %}
+                                <input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
+                                {% endif %}
+                                <p><input type="submit" name="uploadmethod" value="确认执行"><input type="submit" name="clearall" value="清除提交内容"></p>
+                                </td>
+                            </tr>
+
+
                          <!--如果是压缩包，但缺少文件-->
                         {% else %}
                              {% if iftrain == 0 and ifunlabel == 1 %}<p>压缩包中缺少必要的训练集train.txt，请重新上传可用压缩包</p>{% endif %}
@@ -125,24 +164,29 @@
                     {% else %}
                                     <p> 【错误！】你上传的不是压缩包.zip文件。上传的压缩包文件格式，请参照 </p>
                     {% endif %}
-                                </td>
+            </form>
 
-                             </tr>
+
+
 
             <tr>
                 <th>执行结果</th>
                 <td>
                     {% if di %}
                     <ul>
+                        {% if ifsendtoBMT %}
+                        <p>恭喜，已发送到标注平台，点击链接直接跳转完成任务发布</p>
+
+                        {% endif %}
                         {% for d in di %}
-                        <li>{{d}}</a></li>
+                        <li>{{d}}</li>
                         {% endfor %}
                     </ul>
                     {% else %}
                     <p>暂无结果</p>
                     {% endif %}
                 </td>
-            </tr>>
+            </tr>
             </tbody>
         </table>
     </div>

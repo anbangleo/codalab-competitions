@@ -156,11 +156,11 @@ class BinaryClassTest(object):
         s.close()
         print 'connection closed'
 
-    def maintodo(self, trainentity, unlabelentity, testentity, unlabeldatasetdir, quota, trainAndtest, testsize, pushallask,docfile,username):
+    def maintodo(self, quota, trainAndtest, testsize, pushallask,docfile,username):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
-        trainentity = '/app/codalab/thirdpart/'+username+'/'+ trainentity
-        unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ unlabelentity
-        testentity = '/app/codalab/thirdpart/'+username+'/'+ testentity
+        trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
+        unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
+        testentity = '/app/codalab/thirdpart/'+username+'/'+ 'test.txt'
         #[Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
         #1是提交的两个文件，一个训练集一个测试集。
         # trainAndtest = 1
@@ -175,7 +175,7 @@ class BinaryClassTest(object):
         unlabeldatasetdir = '/app/codalab/thirdpart/'+username+'/unlabel'
 
         unlabeldatasetdir = os.listdir(unlabeldatasetdir)
-        p = open('/app/codalab/thirdpart/test1.txt','w')
+
         # E_out1, E_out2 = [], []
         unlabeldict = {}
 

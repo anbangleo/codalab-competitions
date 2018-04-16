@@ -1992,6 +1992,18 @@ def developerlab(request):
     if request.method == 'POST':
 
         submit = request.POST.get('uploadfile',None)
+        clear = request.POST.get('clearall',None)
+        if clear:
+            di = {}
+            iftrain=0
+            iftest=0
+            ifunlabel=0
+            ifdataset=0
+            numofdataset=0
+            numofunlabel=0
+            ifzip = 0 # 0 is none, 1 is valid, 2 is wrong
+            return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
+
         if submit:
             form = DocumentForm(request.POST, request.FILES)
             if form.is_valid():
@@ -2057,8 +2069,9 @@ def developerlab(request):
                 di = {}
                 ifsenttoBMT = 0
                 kind = request.POST.get('kind')#text,image
-                alg = request.POST.get('alg')#binary,multilabel
-                strategy = request.POST.get('strategy')#us,qbc
+                alg = request.POST.get('alg')#us,qbc
+                strategy = request.POST.get('strategy')#binary-label,multi-label
+                model = request.POST.get('model')#logistic, svm
                 testsize = request.POST.get('testsize')
                 numneedtobelabeled = int(request.POST.get('numneedtobelabeled'))
                 markmethod = request.POST.get('markmethod')#returnentities, sendtoBMT
@@ -2078,22 +2091,27 @@ def developerlab(request):
                     markmethod = 1
                     ifsendtoBMT = 0
                     binary = BinaryClassTest()
-                    #numneedtobelabeled, trainandDataset, testsize,
+                    #numneedtobelabeled, trainandtest, testsize,markmethod
 
-                    di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    di = binary.maintodo(numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+
+                    #di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind})
 
                 else:
                     markmethod = 0
                     ifsendtoBMT = 1
                     binary = BinaryClassTest()
-                    #numneedtobelabeled, trainandDataset, testsize, markmethod
-                    di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    #numneedtobelabeled, trainandtest, testsize, markmethod
+                    di = binary.maintodo(numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    #di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT})
             else:
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
 
             return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
+
+
     else:
         form = DocumentForm() # A empty, unbound form
 
