@@ -2040,14 +2040,11 @@ def developerlab(request):
                     if 'test.txt' in expunlabeldataset:
                         iftest = 1
                     if iftrain==1 and ifunlabel==1:
-                        #binary = BinaryClassTest()
-                        #di = binary.maintodo('train.txt','unlabel.txt','test.txt',unlabeldataset,5,1,9,1,docfile,str(request.user))
                         newdoc = Document(docfile = request.FILES['docfile'])
                         newdoc.creator = request.user
                         newdoc.save()
-                        # return HttpResponseRedirect(reverse('developerlab'),{'di':di})
-                    else:
-                        ifzip = 2
+                    #else:
+                        #ifzip = 1
                         # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'di':di})
                 else:
                     ifzip = 2
@@ -2069,9 +2066,11 @@ def developerlab(request):
                 di = {}
                 ifsenttoBMT = 0
                 kind = request.POST.get('kind')#text,image
-                alg = request.POST.get('alg')#us,qbc
-                strategy = request.POST.get('strategy')#binary-label,multi-label
                 model = request.POST.get('model')#logistic, svm
+                strategy = request.POST.get('strategy')#binary,multiclass,multilabel
+                alg = request.POST.get('alg')#us,qbc
+
+
                 testsize = request.POST.get('testsize')
                 numneedtobelabeled = int(request.POST.get('numneedtobelabeled'))
                 markmethod = request.POST.get('markmethod')#returnentities, sendtoBMT
@@ -2093,9 +2092,9 @@ def developerlab(request):
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize,markmethod
 
-                    di = binary.maintodo(numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
 
-                    #di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    #di = binary.maintodo(kind, model, strategy, alg,'train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind})
 
                 else:
@@ -2103,7 +2102,7 @@ def developerlab(request):
                     ifsendtoBMT = 1
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize, markmethod
-                    di = binary.maintodo(numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
+                    di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
                     #di = binary.maintodo('train.txt','unlabel.txt','test.txt','/unlabel',numneedtobelabeled,1,testsize,markmethod,docfilecopy,str(request.user))
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT})
             else:

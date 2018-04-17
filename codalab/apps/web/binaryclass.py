@@ -31,7 +31,7 @@ except ImportError:
 # from makesvm import CreateSVM
 from libact.base.dataset import Dataset
 from libact.models import LogisticRegression
-from libact.query_strategies import UncertaintySampling, RandomSampling
+from libact.query_strategies import UncertaintySampling, RandomSampling, QueryByCommittee
 from libact.base.dataset import Dataset, import_libsvm_sparse
 from libact.labelers import InteractiveLabeler
 from libact.labelers import IdealLabeler
@@ -156,7 +156,7 @@ class BinaryClassTest(object):
         s.close()
         print 'connection closed'
 
-    def maintodo(self, quota, trainAndtest, testsize, pushallask,docfile,username):
+    def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
         unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
@@ -191,10 +191,25 @@ class BinaryClassTest(object):
 
 
         # trn_ds2 = copy.deepcopy(trn_ds)
-        qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
+
         #qs2 = RandomSampling(trn_ds2)
 
-        model = LogisticRegression()
+        #Todo:补充多种策略、算法
+        if strategy == 'binary':
+            if algorithm == 'qbc':
+                qs = QueryByCommittee(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
+            elif algorithm == 'us':
+                qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
+            else:
+                pass
+            model = LogisticRegression()
+        elif strategy == 'multiclass':
+            pass
+
+        else: #multilabel
+            pass
+
+
         
         lbr = IdealLabeler(real_trn_ds)#TODO: trn_ds+test_ds to improve
 
