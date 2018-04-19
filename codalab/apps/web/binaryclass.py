@@ -19,6 +19,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import zipfile
 import time
+import random
 import socket
 import csv
 import json
@@ -120,43 +121,45 @@ class BinaryClassTest(object):
         #返回训练集，训练集的个数，未标记数据的名称list
         return trn_ds, numoftrain, unlabel_name
 
-    def sendfile(self, filedir,filetype,username,numneedtobemarked):
-        SIZE = 1024
+    def sendfile(self, filedir,filetype,username,useremail,numneedtobemarked):
+        SIZE = 65535
+        RECSIZE = 1024
         jsontosend = {}
-        jsontosend['filedir'] = filedir
-        jsontosend['filetype'] = filetype # 1 means text, 2 means image
-        jsontosend['creator'] = username
+        id = time.strftime("%Y", time.localtime())+time.strftime("%m", time.localtime())+time.strftime("%d", time.localtime())+time.strftime("%H", time.localtime())+time.strftime("%M", time.localtime())+time.strftime("%S", time.localtime())
+        id = id + str(random.randint(0,9))+str(random.randint(0,9))+str(random.randint(0,9))+str(random.randint(0,9))+str(random.randint(0,9))
+        jsontosend['id'] = long(id)
+        jsontosend['username'] = username
+        jsontosend['email'] = useremail
+        jsontosend['password'] = 'abcdefg'
+        jsontosend['type'] = filetype # 11 means text, 2 means image
+
         jsontosend['numbersneedtobemarked'] = numneedtobemarked
         jsontosend['createtime'] = str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        js = json.dumps(jsontosend, sort_keys=True, indent=4, separators=(',', ':'))
-
+        #js = json.dumps(jsontosend, sort_keys=True, indent=4, separators=(',', ':'))
+        js = json.dumps(jsontosend)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # 建立连接:
-        s.connect(('47.93.198.34', 8080))
-        # 接收欢迎消息:
-        print s.recv(SIZE)
-
+        s.connect(('10.2.26.114', 12346))
         s.send(js)
-        print 'json send successfully'
-        time.sleep(0.5)
-        # print 'command test begins ...'
-        # s.send('c')
-        # s.send('weeding')
-        # print 'command test ended'
-        # time.sleep(0.5)
 
-        # print 'image test begins ...'
-        # s.send('f')
-        # time.sleep(0.2)
+        time.sleep(0.5)
         with open(filedir, 'rb') as f:
             for data in f:
                 s.send(data)
-        print 'file send successfully'
+
+        time.sleep(0.5)
+        data = s.recv(RECSIZE)
+        rec = json.loads(data)
+
+        rec_status = rec['status']
+        rec_url = rec['url']
+
 
         s.close()
-        print 'connection closed'
 
-    def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username):
+        return rec_status, rec_url
+
+
+    def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
         unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
@@ -170,6 +173,8 @@ class BinaryClassTest(object):
         #如果是交互式问询的话，那么需要标记的标记列表
         #interlabel = ['0','1']
         askidlist = []
+
+        #Todo:ask_id是问的train+unlabel中unlabel的id
 
         
         unlabeldatasetdir = '/app/codalab/thirdpart/'+username+'/unlabel'
@@ -253,8 +258,8 @@ class BinaryClassTest(object):
                 for key, value in unlabeldict.items():
                     #askidlist.append(key)
                     writer.writerow([key, value])
-            #self.sendfile(csvdir,1,username,quota)
-            return askidlist
+            self.sendfile(csvdir,11,username,useremail,quota)
+            return rec_status, rec_url, askidlist
 
 
 
