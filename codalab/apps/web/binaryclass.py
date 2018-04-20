@@ -138,24 +138,29 @@ class BinaryClassTest(object):
         #js = json.dumps(jsontosend, sort_keys=True, indent=4, separators=(',', ':'))
         js = json.dumps(jsontosend)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(('10.2.26.114', 12346))
+        s.connect(('10.2.26.114', 11223))
+
+
+        s.send('c')
+        time.sleep(0.2)
+
+
         s.send(js)
 
         time.sleep(0.5)
+        s.send('f')
+        time.sleep(0.2)
         with open(filedir, 'rb') as f:
             for data in f:
                 s.send(data)
 
         time.sleep(0.5)
+
         data = s.recv(RECSIZE)
         rec = json.loads(data)
-
         rec_status = rec['status']
         rec_url = rec['url']
-
-
         s.close()
-
         return rec_status, rec_url
 
 
@@ -258,7 +263,9 @@ class BinaryClassTest(object):
                 for key, value in unlabeldict.items():
                     #askidlist.append(key)
                     writer.writerow([key, value])
-            self.sendfile(csvdir,11,username,useremail,quota)
+            rec_status, rec_url = self.sendfile(csvdir,11,username,useremail,quota)
+            #rec_status = 0
+            #rec_url = ''
             return rec_status, rec_url, askidlist
 
 

@@ -1975,7 +1975,8 @@ di = {}
 
 docfilecopy = ''
 ifsendtoBMT = 0
-
+rec_status = 0
+rec_url = ''
 @login_required
 def developerlab(request):
     # Handle file upload
@@ -1989,6 +1990,8 @@ def developerlab(request):
     global di
     global docfilecopy
     global ifsendtoBMT
+    global rec_status
+    global rec_url
 
     if request.method == 'POST':
 
@@ -2084,12 +2087,7 @@ def developerlab(request):
                     trainandtest = 1
                 else:
                     testsize = float(testsize)
-                    testsizeerror = "验证集比例设置异常，请校验后输入【0-1之间的浮点数】"
-
-                    if testsize>1 or testsize<0:
-                        return HttpResponseRedirect(reverse('developerlab_upload'),{'testsizeerror':testsizeerror})
-                    else:
-                        trainandtest = 0
+                    trainandtest = 0
 
                 if markmethod == 'returnentities':
                     markmethod = 1
@@ -2129,6 +2127,7 @@ def developerlab(request):
         'web/my/developerlab.html',
         {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset,'ifsendtoBMT':ifsendtoBMT,
          'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di,
+         'rec_status':rec_status, 'rec_url':rec_url
          },
         context_instance=RequestContext(request)
     )
