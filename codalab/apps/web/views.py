@@ -2080,6 +2080,8 @@ def developerlab(request):
                 strategy = request.POST.get('strategy')#binary,multiclass,multilabel
                 alg = request.POST.get('alg')#us,qbc
 
+                bmtpassword = request.POST.get('bmtpassword')
+
 
                 testsize = request.POST.get('testsize')
                 numneedtobelabeled = int(request.POST.get('numneedtobelabeled'))
@@ -2101,7 +2103,7 @@ def developerlab(request):
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize,markmethod
 
-                    di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail)
+                    di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
 
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind})
 
@@ -2110,7 +2112,7 @@ def developerlab(request):
                     ifsendtoBMT = 1
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize, markmethod
-                    rec_status, rec_url, di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail)
+                    rec_status, rec_url, di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url})
             else:
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})

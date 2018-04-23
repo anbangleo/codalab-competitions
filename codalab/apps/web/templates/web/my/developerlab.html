@@ -9,52 +9,51 @@
 
 <h2>{{ user.username }}</h2>
 {% block content %}
-<!--<script type="text/javascript">-->
-    <!--function myCheck1()-->
-    <!--{-->
-        <!--alert("hello");-->
-        <!--uploadfile.submit();-->
-    <!--}-->
-    <!--function myCheck2()-->
-    <!--{-->
-<!--//        if(form2.text2.value=="")-->
-<!--//        {-->
-<!--//            alert("内容不能为空,请输入内容");-->
-<!--//            form2.text2.focus();-->
-<!--//            return ;-->
-<!--//        }-->
-        <!--alert("world");-->
-        <!--uploadmethod.submit();-->
-    <!--}-->
-<!--</script>-->
-<!--<script type="text/javascript">-->
-<!--function checkform() {-->
-    <!--numsnull = $("#idnumneedtobelabeled").val();-->
-    <!--numbers = $("#numofunlabel").val();-->
-    <!--testsize = $("#idtestsize").val();-->
 
-    <!--if(testsize==""){-->
-        <!--alert("请输入验证集比例！");-->
-        <!--return false;-->
-    <!--}-->
-    <!--else if(testsize>1 || testsize<=0){-->
-        <!--alert("请输入一个0-1之间的验证集比例！建议范围0.20-0.40")-->
-        <!--return false;-->
-    <!--}-->
+<script type="text/javascript">
+function checkform() {
+    numsnull = $("#idnumneedtobelabeled").val();
+    numbers = $("#numofunlabel").val();
+    testsize = $("#idtestsize").val();
 
+    ifsendtoBMT = $("#radio_senttoBMT").val()
 
-    <!--if (numsnull==""){-->
-        <!--alert("请输入标注集个数！");-->
-        <!--return false;-->
-    <!--}-->
-    <!--else if(parseInt(numsnull)>numbers)-->
-    <!--{-->
-        <!--alert("你输入的标注实例个数大于系统检测到的最大验证集！");-->
-        <!--return false;-->
-    <!--}-->
-    <!--return true;-->
-<!--}-->
-<!--</script>-->
+    $("#clearbutton").click(function () {
+        return true;
+    });
+
+    if(testsize==""){
+        alert("请输入验证集比例！");
+        return false;
+    }
+    else if(testsize>1 || testsize<=0){
+        alert("请输入一个0-1之间的验证集比例！建议范围0.20-0.40")
+        return false;
+    }
+    if (numsnull==""){
+        alert("请输入标注集个数！");
+        return false;
+    }
+    else if(parseInt(numsnull)>numbers)
+    {
+        alert("你输入的标注实例个数大于系统检测到的最大验证集！");
+        return false;
+    }
+
+//    $("#uplaodtmethod").click(function () {
+//        if(ifsendtoBMT==1){
+//            var name=prompt("请输入您的名字","Bill Gates")
+//            if (name!=null && name!="")
+//            {
+//                document.write("你好！" + name + " 今天过得怎么样？")
+//            }
+//        }
+//        }
+//    });
+
+    return true;
+}
+</script>
 
 <script>
     $(document).ready(function() {
@@ -69,6 +68,16 @@
             $("#algforbinary").hide();
             $("#algformulticlass").show();
         });
+        $("#bmtpassword").hide();
+        $("#radio_returnentities").click(function () {
+            $("#bmtpassword").hide()
+        });
+
+        $("#radio_senttoBMT").click(function () {
+            $("#bmtpassword").show()
+        });
+
+
     });
 
 </script>
@@ -90,7 +99,7 @@
                         <p>No documents.</p>
                         {% endif %}
                         <!-- Upload form. Note enctype attribute! -->
-                            <form action="{% url 'developerlab_upload' %}" name="uploadfile" id= "uploadfile1" method="post" enctype="multipart/form-data">
+                            <form action="{% url 'developerlab_upload' %}" name="uploadfile" id= "uploadfile1" method="post" enctype="multipart/form-data" onsubmit="return checkform()">
                                 {% csrf_token %}
                                 <p>{{ form.non_field_errors }}</p>
                                 <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
@@ -162,12 +171,16 @@
                                 <th>标注方式</th>
                                 <td align="left">
                                 {% if ifdataset == 1 %}
-                                <input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
-                                    <input type="radio" name = "markmethod" value = "sendtoBMT" >发往交互平台众包标注
+                                <input type="radio" name = "markmethod" value = "returnentities"checked id="radio_returnentities">返回需标注的实例名称
+                                    <input type="radio" name = "markmethod" value = "sendtoBMT" id = "radio_senttoBMT">发往交互平台众包标注
                                 {% else %}
                                 <input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
                                 {% endif %}
-                                <p><input type="submit" name="uploadmethod" value="确认执行"><input type="submit" name="clearall" value="清除提交内容"></p>
+                                    <div id="bmtpassword">
+                                    <p>请输入BuaaMT密码<input type="password" name="bmtpassword"></p>
+                                        <p><i>（注:如先前未注册过，该密码即为注册密码）</i></p>
+                                        </div>
+                                <p><input type="submit" id = "uplaodtmethod" name="uploadmethod" value="确认执行"><input type="submit" name="clearall" id="clearbutton" value="清除提交内容"></p>
                                 </td>
                             </tr>
 
@@ -199,9 +212,7 @@
                         {% if ifsendtoBMT %}
                             {% if rec_status == -1 %}
                                 <script type="text/javascript">
-
                                      alert("链接标注平台超时！");
-
                                 </script>
                             {% elif rec_status == 1 %}
                             <p>恭喜，已发送到标注平台，<a href="http://{{rec_url}}">点击链接直接跳转完成任务发布</a></p>

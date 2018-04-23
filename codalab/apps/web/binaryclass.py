@@ -23,6 +23,8 @@ import random
 import socket
 import csv
 import json
+import base64
+import heapq
 try:
     from sklearn.model_selection import train_test_split
 except ImportError:
@@ -121,7 +123,7 @@ class BinaryClassTest(object):
         #返回训练集，训练集的个数，未标记数据的名称list
         return trn_ds, numoftrain, unlabel_name
 
-    def sendfile(self, filedir,filetype,username,useremail,numneedtobemarked):
+    def sendfile(self, filedir,filetype,username,useremail,password,numneedtobemarked):
         SIZE = 65535
         RECSIZE = 1024
         jsontosend = {}
@@ -130,7 +132,7 @@ class BinaryClassTest(object):
         jsontosend['id'] = long(id)
         jsontosend['username'] = username
         jsontosend['email'] = useremail
-        jsontosend['password'] = 'abcdefg'
+        jsontosend['password'] = password
         jsontosend['type'] = filetype # 11 means text, 2 means image
 
         jsontosend['numbersneedtobemarked'] = numneedtobemarked
@@ -163,8 +165,31 @@ class BinaryClassTest(object):
         s.close()
         return rec_status, rec_url
 
+    def encryptbmt(self, bmtpassword):
+        pwd = bmtpassword[::-1]
+        k = 0
+        newpwd = ''
 
-    def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail):
+        for i in pwd:
+            i = chr(ord(i)-k)
+            k = k + 1
+            newpwd = newpwd + i
+
+        newpwd2 = base64.b64encode(newpwd)
+
+        newpwd3 = 'T' + newpwd2 + 'B'
+
+        newpwd4=''
+        for i in newpwd3:
+            i = chr(ord(i)+1)
+            newpwd4 = newpwd4 + i
+
+        newpassword = base64.b64encode(newpwd4)
+
+        return newpassword
+
+
+    def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
         unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
@@ -223,24 +248,40 @@ class BinaryClassTest(object):
         
         lbr = IdealLabeler(real_trn_ds)#TODO: trn_ds+test_ds to improve
 
+        #返回一批实例
         if pushallask == 1:
-            for i in range(quota):
-                ask_id = qs.make_query()
-                filename = unlabelnames[ask_id-numoftrain]
-
-                X,i = zip(*trn_ds.data)
-
-                lb = lbr.label(X[ask_id-numoftrain])
-                trn_ds.update(ask_id, lb)
-                model.train(trn_ds)
+            first, scores = qs.make_query(return_score = True)
+            number, num_score = zip(*scores)[0], zip(*scores)[1]
+            num_score_array = np.array(num_score)
+            max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
+            for ask_id in max_n:
+                filename = unlabelnames[ask_id]
                 askidlist.append(filename)
             return askidlist
 
+
+#            for i in range(quota):
+#                ask_id = qs.make_query()
+#                filename = unlabelnames[ask_id-numoftrain]
+
+#                X,i = zip(*trn_ds.data)
+
+#                lb = lbr.label(X[ask_id-numoftrain])
+#                trn_ds.update(ask_id, lb)
+#                model.train(trn_ds)
+#                askidlist.append(filename)
+#            return askidlist
+
         #向标注平台发送
         else:
-            for i in range(quota):
-                ask_id = qs.make_query()
-                filename = unlabelnames[ask_id-numoftrain]
+            first, scores = qs.make_query(return_score = True)
+            number, num_score = zip(*scores)[0], zip(*scores)[1]
+            num_score_array = np.array(num_score)
+            max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
+
+
+            for ask_id in max_n:
+                filename = unlabelnames[ask_id]
                 if filename.split('/')[-1] in unlabeldatasetdir:
                     #filebody = zipfile.ZipFile(docfile).read(traintext).decode('utf-8')
                     #unlabeldict[filename] = filebody
@@ -249,11 +290,11 @@ class BinaryClassTest(object):
                         filebody = f.read()
                         unlabeldict[filename] = filebody
 
-                X,i = zip(*trn_ds.data)
+                #X,i = zip(*trn_ds.data)
 
-                lb = lbr.label(X[ask_id-numoftrain])
-                trn_ds.update(ask_id, lb)
-                model.train(trn_ds)
+                #lb = lbr.label(X[ask_id-numoftrain])
+                #trn_ds.update(ask_id, lb)
+                #model.train(trn_ds)
                 askidlist.append(filename)
 
             csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
@@ -263,9 +304,12 @@ class BinaryClassTest(object):
                 for key, value in unlabeldict.items():
                     #askidlist.append(key)
                     writer.writerow([key, value])
-            rec_status, rec_url = self.sendfile(csvdir,11,username,useremail,quota)
-            #rec_status = 0
-            #rec_url = ''
+            newpassword = self.encryptbmt(bmtpassword)
+
+            #rec_status, rec_url = self.sendfile(csvdir,11,username,useremail,newpassword,quota)
+
+            rec_status = 0
+            rec_url = 'www.baidu.com'
             return rec_status, rec_url, askidlist
 
 
