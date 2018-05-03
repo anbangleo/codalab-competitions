@@ -1983,6 +1983,8 @@ docfilecopy = ''
 ifsendtoBMT = 0
 rec_status = 0
 rec_url = ''
+picture_url = ''
+
 @login_required
 def developerlab(request):
     # Handle file upload
@@ -1998,6 +2000,7 @@ def developerlab(request):
     global ifsendtoBMT
     global rec_status
     global rec_url
+    global picture_url
 
     if request.method == 'POST':
 
@@ -2052,14 +2055,10 @@ def developerlab(request):
                     if iftrain==1 and ifunlabel==1:
                         newdoc = Document(docfile = request.FILES['docfile'])
                         newdoc.creator = request.user
-                        newdoc.save()
-                    #else:
-                        #ifzip = 1
-                        # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'di':di})
+                        #newdoc.save()#[todo]:change to save
+
                 else:
                     ifzip = 2
-                    # return HttpResponseRedirect(reverse('developerlab'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'ifzip':ifzip})
-
 
                 # Redirect to the document list after POST
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
@@ -2105,7 +2104,8 @@ def developerlab(request):
 
                     di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
 
-                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind})
+                    picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
+                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind,'picture_url':picture_url})
 
                 else:
                     markmethod = 0
@@ -2113,7 +2113,8 @@ def developerlab(request):
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize, markmethod
                     rec_status, rec_url, di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
-                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url})
+                    picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
+                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url,'picture_url':picture_url})
             else:
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
 
@@ -2135,7 +2136,7 @@ def developerlab(request):
         'web/my/developerlab.html',
         {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset,'ifsendtoBMT':ifsendtoBMT,
          'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di,
-         'rec_status':rec_status, 'rec_url':rec_url
+         'rec_status':rec_status, 'rec_url':rec_url, 'picture_url':picture_url
          },
         context_instance=RequestContext(request)
     )

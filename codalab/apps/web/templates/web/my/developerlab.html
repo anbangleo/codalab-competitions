@@ -39,18 +39,6 @@ function checkform() {
         alert("你输入的标注实例个数大于系统检测到的最大验证集！");
         return false;
     }
-
-//    $("#uplaodtmethod").click(function () {
-//        if(ifsendtoBMT==1){
-//            var name=prompt("请输入您的名字","Bill Gates")
-//            if (name!=null && name!="")
-//            {
-//                document.write("你好！" + name + " 今天过得怎么样？")
-//            }
-//        }
-//        }
-//    });
-
     return true;
 }
 </script>
@@ -199,6 +187,15 @@ function checkform() {
                     {% endif %}
             </form>
 
+
+            {% if di %}
+            <tr>
+                <th>效果预览</th>
+                <td>
+                    <img src = "{{picture_url}}">
+                </td>
+            </tr>
+            {% endif %}
 
 
 

@@ -16,7 +16,10 @@ LogisticRegression.
 import copy
 import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 import zipfile
 import time
 import random
@@ -189,6 +192,77 @@ class BinaryClassTest(object):
         return newpassword
 
 
+    def split_for_drawplot(self, trn_ds, numoftrain, quota):
+        #n_labeled = numoftrain - quota
+
+        #if n_labeled < 10:
+        #    n_labeled = 1
+        #else:
+        #    n_labeled = 5
+
+        n_labeled = numoftrain - quota
+        n_labeled = int(n_labeled/6)
+        if n_labeled < 1:
+            n_labeled = 1
+
+
+        x_train,y_train = trn_ds.format_sklearn()[0],trn_ds.format_sklearn()[1]
+
+        #for i in range(len(y_train)):
+        #    if y_train[i] != y_train[i+1]:
+        #        n_labeled = i + 1
+        #        break
+
+
+
+        none_trn_ds = Dataset(x_train, np.concatenate(
+            [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
+
+        return none_trn_ds
+
+
+    #空跑测试集做图像
+    def score_ideal(self, trn_ds,tst_ds,lbr,model,qs,quota):
+        E_in, E_out = [], []
+
+        for _ in range(quota):
+            ask_id = qs.make_query()
+
+            X, _ = zip(*trn_ds.data)
+            c = len(X)
+
+            lb = lbr.label(X[ask_id])
+            trn_ds.update(ask_id, lb)
+            model.train(trn_ds)
+            E_in = np.append(E_in, 1 - model.score(trn_ds))#in-sample error
+            E_out = np.append(E_out, 1 - model.score(tst_ds))#out-sample error
+        return E_in, E_out
+
+    def plotforimage(self, query_num,E_in1,E_in2,E_out1,E_out2,username):
+        dir = '/app/codalab/static/img/partpicture/'+username+'/'
+
+        if os.path.isfile(dir + 'compare.png'):
+            os.remove(dir + 'compare.png')
+        plt.plot(query_num, E_in1, 'b', label='qs Ein')
+        plt.plot(query_num, E_in2, 'r', label='random Ein')
+        plt.plot(query_num, E_out1, 'g', label='qs Eout')
+        plt.plot(query_num, E_out2, 'k', label='random Eout')
+        plt.xlabel('Number of Queries')
+        plt.ylabel('Error')
+        plt.title('Experiment Result')
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+                   fancybox=True, shadow=True, ncol=5)
+
+        isExists = os.path.exists(dir)
+        if not isExists:
+            os.makedirs(dir)
+        plt.savefig(dir + 'compare.png')
+        plt.clf()
+        plt.close()
+
+
+
+
     def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
@@ -210,31 +284,34 @@ class BinaryClassTest(object):
         unlabeldatasetdir = '/app/codalab/thirdpart/'+username+'/unlabel'
 
         unlabeldatasetdir = os.listdir(unlabeldatasetdir)
-
-        # E_out1, E_out2 = [], []
+        E_in1, E_in2 = [], []
+        E_out1, E_out2 = [], []
         unlabeldict = {}
 
         #[Todo]:提交的是Train还是Train+Test
         if trainAndtest == 1:
             trn_ds,numoftrain,unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
             tst_ds = self.split_onlytest(testentity)
+            none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
         else:
             #[Todo]:提交的只有一个Train
             trn, trn_label, tst_ds = self.split_train_test(trainentity,testsize)
             trn_ds,numoftrain,unlabelnames = self.split_train_test_unlabel(trn, trn_label, unlabelentity)
             real_trn_ds = copy.deepcopy(trn_ds)
+            none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
 
-        # trn_ds2 = copy.deepcopy(trn_ds)
-
-        #qs2 = RandomSampling(trn_ds2)
+        trn_ds_random = copy.deepcopy(none_trn_ds)#原验证集强行划分部分未知None做效果用
+        qs_random = RandomSampling(trn_ds_random)
 
         #Todo:补充多种策略、算法
         if strategy == 'binary':
             if algorithm == 'qbc':
                 qs = QueryByCommittee(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
+                qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
             elif algorithm == 'us':
                 qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
+                qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
             else:
                 pass
             model = LogisticRegression()
@@ -244,11 +321,19 @@ class BinaryClassTest(object):
         else: #multilabel
             pass
 
-
         
-        lbr = IdealLabeler(real_trn_ds)#TODO: trn_ds+test_ds to improve
+        lbr = IdealLabeler(real_trn_ds)
 
-        #返回一批实例
+        E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
+        model = LogisticRegression()
+
+        E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
+
+        self.plotforimage(np.arange(1,quota+1),E_in1,E_in2,E_out1,E_out2,username)
+
+
+
+        #返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
@@ -258,19 +343,6 @@ class BinaryClassTest(object):
                 filename = unlabelnames[ask_id]
                 askidlist.append(filename)
             return askidlist
-
-
-#            for i in range(quota):
-#                ask_id = qs.make_query()
-#                filename = unlabelnames[ask_id-numoftrain]
-
-#                X,i = zip(*trn_ds.data)
-
-#                lb = lbr.label(X[ask_id-numoftrain])
-#                trn_ds.update(ask_id, lb)
-#                model.train(trn_ds)
-#                askidlist.append(filename)
-#            return askidlist
 
         #向标注平台发送
         else:
@@ -283,18 +355,11 @@ class BinaryClassTest(object):
             for ask_id in max_n:
                 filename = unlabelnames[ask_id]
                 if filename.split('/')[-1] in unlabeldatasetdir:
-                    #filebody = zipfile.ZipFile(docfile).read(traintext).decode('utf-8')
-                    #unlabeldict[filename] = filebody
                     filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
                     with open(filenamefull) as f:
                         filebody = f.read()
                         unlabeldict[filename] = filebody
 
-                #X,i = zip(*trn_ds.data)
-
-                #lb = lbr.label(X[ask_id-numoftrain])
-                #trn_ds.update(ask_id, lb)
-                #model.train(trn_ds)
                 askidlist.append(filename)
 
             csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
@@ -311,6 +376,3 @@ class BinaryClassTest(object):
             rec_status = 0
             rec_url = 'www.baidu.com'
             return rec_status, rec_url, askidlist
-
-
-
