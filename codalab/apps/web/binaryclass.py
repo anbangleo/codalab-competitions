@@ -41,6 +41,7 @@ from libact.query_strategies import UncertaintySampling, RandomSampling, QueryBy
 from libact.base.dataset import Dataset, import_libsvm_sparse
 from libact.labelers import InteractiveLabeler
 from libact.labelers import IdealLabeler
+from query_by_committee_plus import QueryByCommitteePlus
 class BinaryClassTest(object):
     def __init__(self):
         pass
@@ -200,19 +201,35 @@ class BinaryClassTest(object):
         #else:
         #    n_labeled = 5
 
-        n_labeled = numoftrain - quota
-        n_labeled = int(n_labeled/6)
-        if n_labeled < 1:
-            n_labeled = 1
+        n_labeled = 0
+        flag = 0
+        #n_labeled = numoftrain - quota
+        #n_labeled = int(n_labeled/6)
+        #if n_labeled < 1:
+        #    n_labeled = 1
+
 
 
         x_train,y_train = trn_ds.format_sklearn()[0],trn_ds.format_sklearn()[1]
 
-        #for i in range(len(y_train)):
-        #    if y_train[i] != y_train[i+1]:
-        #        n_labeled = i + 1
-        #        break
-
+        try:
+            if numoftrain >=1000:
+                n_labeled = int(numoftrain/40)
+            elif numoftrain >=500:
+                n_labeled = int(numoftrain/20)
+            elif numoftrain >=100:
+                n_labeled = int(numoftrain/10)
+            else:
+                n_labeled = 6
+        except:
+            for i in range(len(y_train)):
+                if y_train[i] != y_train[i+1]:
+                    flag=1
+                    n_labeled = i+2
+                    break
+                flag = -1
+        if flag ==-1:
+            pass#[todo]报错
 
 
         none_trn_ds = Dataset(x_train, np.concatenate(
@@ -230,7 +247,6 @@ class BinaryClassTest(object):
 
             X, _ = zip(*trn_ds.data)
             c = len(X)
-
             lb = lbr.label(X[ask_id])
             trn_ds.update(ask_id, lb)
             model.train(trn_ds)
@@ -288,13 +304,13 @@ class BinaryClassTest(object):
         E_out1, E_out2 = [], []
         unlabeldict = {}
 
-        #[Todo]:提交的是Train还是Train+Test
+        #提交的是Train还是Train+Test
         if trainAndtest == 1:
             trn_ds,numoftrain,unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
             tst_ds = self.split_onlytest(testentity)
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
         else:
-            #[Todo]:提交的只有一个Train
+            #提交的只有一个Train
             trn, trn_label, tst_ds = self.split_train_test(trainentity,testsize)
             trn_ds,numoftrain,unlabelnames = self.split_train_test_unlabel(trn, trn_label, unlabelentity)
             real_trn_ds = copy.deepcopy(trn_ds)
@@ -307,7 +323,7 @@ class BinaryClassTest(object):
         #Todo:补充多种策略、算法
         if strategy == 'binary':
             if algorithm == 'qbc':
-                qs = QueryByCommittee(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
+                qs = QueryByCommitteePlus(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
                 qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
             elif algorithm == 'us':
                 qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
@@ -335,13 +351,14 @@ class BinaryClassTest(object):
 
         #返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
+
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
             max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
             for ask_id in max_n:
-                filename = unlabelnames[ask_id]
-                askidlist.append(filename)
+               filename = unlabelnames[ask_id]
+               askidlist.append(filename)
             return askidlist
 
         #向标注平台发送
