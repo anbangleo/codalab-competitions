@@ -1984,6 +1984,7 @@ ifsendtoBMT = 0
 rec_status = 0
 rec_url = ''
 picture_url = ''
+csv_url = ''
 
 @login_required
 def developerlab(request):
@@ -2001,6 +2002,7 @@ def developerlab(request):
     global rec_status
     global rec_url
     global picture_url
+    global csv_url
 
     if request.method == 'POST':
 
@@ -2016,8 +2018,9 @@ def developerlab(request):
             numofunlabel=0
             ifzip = 0 # 0 is none, 1 is valid, 2 is wrong
             return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
-
+#
         if submit:
+            di={}
             form = DocumentForm(request.POST, request.FILES)
             if form.is_valid():
                 docfile = request.FILES['docfile']
@@ -2032,6 +2035,7 @@ def developerlab(request):
                     ifdataset=0
                     numofdataset=0
                     numofunlabel=0
+
                     ifzip = 1 # 0 is none, 1 is valid, 2 is wrong
                     ziplist = zipfile.ZipFile(docfile)
 
@@ -2063,6 +2067,7 @@ def developerlab(request):
                 # Redirect to the document list after POST
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
         else:
+
             #doclist = list(Document.objects.filter(creator = request.user))
             #docfilecopy = Document.objects.filter(creator = request.user)[len(doclist)-1]['docfile']
             docfilecopy = '/app/codalab/thirdpart/'+str(request.user)+'/docfile.zip'
@@ -2102,10 +2107,11 @@ def developerlab(request):
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize,markmethod
 
-                    di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
+                    di, csvdir = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
 
                     picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
-                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind,'picture_url':picture_url})
+                    csv_url = '/static/img/partpicture/'+str(request.user)+'/dict.csv'
+                    return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'kind':kind,'picture_url':picture_url,'csvdir':csv_url})
 
                 else:
                     markmethod = 0
@@ -2116,9 +2122,10 @@ def developerlab(request):
                     picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url,'picture_url':picture_url})
             else:
-                return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
 
-            return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy})
+                return HttpResponseRedirect(reverse('developerlab_upload'),{'docfilecopy':docfilecopy})
+
+            return HttpResponseRedirect(reverse('developerlab_upload'),{'docfilecopy':docfilecopy})
 
 
     else:
@@ -2126,6 +2133,7 @@ def developerlab(request):
 
     # Load documents for the list page
     #documentss = Document.objects.all()
+
     doclist = list(Document.objects.filter(creator=request.user))
     documentss = Document.objects.filter(creator=request.user)
     if(len(doclist)>10):
@@ -2136,7 +2144,7 @@ def developerlab(request):
         'web/my/developerlab.html',
         {'documentss': documentss, 'form': form, 'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset,'ifsendtoBMT':ifsendtoBMT,
          'numofdataset':numofdataset, 'numofunlabel':numofunlabel,'di':di,
-         'rec_status':rec_status, 'rec_url':rec_url, 'picture_url':picture_url
+         'rec_status':rec_status, 'rec_url':rec_url, 'picture_url':picture_url,'csvdir':csv_url
          },
         context_instance=RequestContext(request)
     )

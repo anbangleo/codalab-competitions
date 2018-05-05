@@ -36,7 +36,7 @@ except ImportError:
 # libact classes
 # from makesvm import CreateSVM
 from libact.base.dataset import Dataset
-from libact.models import LogisticRegression
+from libact.models import LogisticRegression,SVM
 from libact.query_strategies import UncertaintySampling, RandomSampling, QueryByCommittee
 from libact.base.dataset import Dataset, import_libsvm_sparse
 from libact.labelers import InteractiveLabeler
@@ -279,7 +279,7 @@ class BinaryClassTest(object):
 
 
 
-    def maintodo(self, kind, model, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
+    def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
         unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
@@ -321,34 +321,76 @@ class BinaryClassTest(object):
         qs_random = RandomSampling(trn_ds_random)
 
         #Todo:补充多种策略、算法
-        if strategy == 'binary':
-            if algorithm == 'qbc':
-                qs = QueryByCommitteePlus(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
-                qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.1),],)
-            elif algorithm == 'us':
-                qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
-                qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
-            else:
-                pass
-            model = LogisticRegression()
-        elif strategy == 'multiclass':
-            pass
+        if modelselect == 'logic':
+            if strategy == 'binary':
+                if algorithm == 'qbc':
+                    qs = QueryByCommitteePlus(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
+                    qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
+                elif algorithm == 'us':
+                    qs = UncertaintySampling(trn_ds,model=SVM(decision_function_shape='ovr'))
+                    qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
+                else:
+                    pass
+                model = LogisticRegression()
+            elif strategy == 'multiclass':#[todo]need to be improved
+                if algorithm == 'qbc':
+                    qs = QueryByCommitteePlus(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
+                    qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
+                elif algorithm == 'us':
+                    qs = UncertaintySampling(trn_ds,model=SVM(decision_function_shape='ovr'))
+                    qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
+                else:
+                    pass
+                model = LogisticRegression()
 
-        else: #multilabel
+            else: #multilabel
+                pass
+
+            lbr = IdealLabeler(real_trn_ds)
+
+            E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
+            model = LogisticRegression()
+
+            E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
+
+
+
+        elif modelselect == 'svm':
+            if strategy == 'binary':
+                if algorithm == 'qbc':
+                    qs = QueryByCommitteePlus(trn_ds,models=[SVM(C=1.0, decision_function_shape='ovr'),SVM(C=0.4, decision_function_shape='ovr'),],)
+                    qs_fordraw = QueryByCommittee(none_trn_ds,models=[SVM(C=1.0, decision_function_shape='ovr'),SVM(C=0.4, decision_function_shape='ovr'),],)
+                elif algorithm == 'us':
+                    qs = UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr'))
+                    qs_fordraw = UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr'))
+                else:
+                    pass
+                model = SVM(kernel='linear', decision_function_shape='ovr')
+            elif strategy == 'multiclass':
+                pass
+
+            else: #multilabel
+                pass
+            lbr = IdealLabeler(real_trn_ds)
+
+            E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
+            model = SVM(kernel='linear', decision_function_shape='ovr')
+            E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
+        else:
             pass
 
         
-        lbr = IdealLabeler(real_trn_ds)
+#        lbr = IdealLabeler(real_trn_ds)
 
-        E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
-        model = LogisticRegression()
+#        E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
+#        model = LogisticRegression()
 
-        E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
+#        E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
 
         self.plotforimage(np.arange(1,quota+1),E_in1,E_in2,E_out1,E_out2,username)
 
 
-
+#dir = '/app/codalab/static/img/partpicture/'+username+'/'
         #返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
 
@@ -356,10 +398,40 @@ class BinaryClassTest(object):
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
             max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
-            for ask_id in max_n:
-               filename = unlabelnames[ask_id]
-               askidlist.append(filename)
-            return askidlist
+
+            if len(unlabeldatasetdir) < 1:
+                for ask_id in max_n:
+                    filename = unlabelnames[ask_id]
+                    askidlist.append(filename)
+
+                csvdir = '/app/codalab/static/img/partpicture/'+username+'/dict.csv'
+                with open(csvdir, 'wb') as csv_file:
+                    writer = csv.writer(csv_file)
+                    writer.writerow(['name'])
+                    for unlabelname in askidlist:
+                        writer.writerow([unlabelname])
+
+                return askidlist,csvdir
+            else:
+                for ask_id in max_n:
+                    filename = unlabelnames[ask_id]
+                    if filename.split('/')[-1] in unlabeldatasetdir:
+                        filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
+                        with open(filenamefull) as f:
+                            filebody = f.read()
+                            unlabeldict[filename] = filebody
+
+                    askidlist.append(filename)
+
+                csvdir = '/app/codalab/static/img/partpicture/'+username+'/dict.csv'
+                with open(csvdir, 'wb') as csv_file:
+                    writer = csv.writer(csv_file)
+                    writer.writerow(['name','entity'])
+                    for key, value in unlabeldict.items():
+                        #askidlist.append(key)
+                        writer.writerow([key, value])
+                return askidlist,csvdir
+
 
         #向标注平台发送
         else:

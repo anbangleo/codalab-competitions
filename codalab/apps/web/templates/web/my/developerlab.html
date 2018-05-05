@@ -187,7 +187,7 @@ function checkform() {
                     {% endif %}
             </form>
 
-
+            {% if ifzip == 1 %}
             {% if di %}
             <tr>
                 <th>效果预览</th>
@@ -203,7 +203,9 @@ function checkform() {
                 <th>执行结果</th>
                 <td>
 
+
                     {% if di %}
+                    <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
                     <ul>
 
                         {% if ifsendtoBMT %}
@@ -222,15 +224,17 @@ function checkform() {
                             {% endif %}
 
                         {% endif %}
-                        {% for d in di %}
-                        <li>{{d}}</li>
-                        {% endfor %}
+                        <!--{% for d in di %}-->
+                        <!--<li>{{d}}</li>-->
+                        <!--{% endfor %}-->
                     </ul>
                     {% else %}
                     <p>暂无结果</p>
                     {% endif %}
                 </td>
             </tr>
+
+            {% endif %}
             </tbody>
         </table>
     </div>
