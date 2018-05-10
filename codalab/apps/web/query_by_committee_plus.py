@@ -206,6 +206,6 @@ class QueryByCommitteePlus(QueryStrategy):
 
             vote_entropy = self._kl_divergence_disagreement(proba)
             ask_idx = self.random_state_.choice(
-                    np.where(np.isclose(vote_entropy, np.max(avg_kl)))[0])
+                    np.where(np.isclose(vote_entropy, np.max(vote_entropy)))[0])
 
         return unlabeled_entry_ids[ask_idx], list(zip(unlabeled_entry_ids, vote_entropy))
