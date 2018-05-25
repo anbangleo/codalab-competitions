@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 import csv
 import datetime
 import exceptions
@@ -36,7 +35,6 @@ from django.db.models import Max
 from django.db.models.signals import post_save
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now
-from django.utils.translation import ugettext
 
 from mptt.models import MPTTModel, TreeForeignKey
 
@@ -87,7 +85,7 @@ class ContentCategory(MPTTModel):
     .. note::
 
         Three defaults content category:
-            - 比赛细则.
+            - Learn the Details.
             - Participate.
             - Results.
     """
@@ -228,22 +226,23 @@ class Competition(ChaHubSaveMixin, models.Model):
         null=True,
         blank=True,
         related_name='competitions',
-        help_text=ugettext("don't change this unless you have a reason to, default/empty is fine"),
+        help_text="(don't change this unless you have a reason to, default/empty is fine)",
         on_delete=models.SET_NULL
     )
     title = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
-    image = models.FileField(upload_to=_uuidify('logos'), storage=PublicStorage, null=True, blank=True, verbose_name=ugettext("Logo"))
+    url_redirect = models.URLField(null=True, blank=True, verbose_name="URL Redirect", help_text="(NOTE: You should not have Registration Required above checked if using URL redirection, because upon redirect participants will not be approved and unable to participate.)")
+    image = models.FileField(upload_to=_uuidify('logos'), storage=PublicStorage, null=True, blank=True, verbose_name="Logo")
     image_url_base = models.CharField(max_length=255)
-    has_registration = models.BooleanField(default=False, verbose_name=ugettext("Registration Required"))
-    start_date = models.DateTimeField(null=True, blank=True, verbose_name=ugettext("Start Date"))
-    end_date = models.DateTimeField(null=True, blank=True, verbose_name=ugettext("End Date"))
+    has_registration = models.BooleanField(default=False, verbose_name="Registration Required")
+    start_date = models.DateTimeField(null=True, blank=True, verbose_name="Start Date (UTC)")
+    end_date = models.DateTimeField(null=True, blank=True, verbose_name="End Date (UTC)")
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='competitioninfo_creator')
     admins = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='competition_admins', blank=True, null=True)
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='competitioninfo_modified_by')
     last_modified = models.DateTimeField(auto_now_add=True)
     pagecontainers = generic.GenericRelation(PageContainer)
-    published = models.BooleanField(default=False, verbose_name=ugettext("Publicly Available"))
+    published = models.BooleanField(default=False, verbose_name="Publicly Available")
     # Let's assume the first phase never needs "migration"
     last_phase_migration = models.PositiveIntegerField(default=1)
     is_migrating = models.BooleanField(default=False)
@@ -258,14 +257,15 @@ class Competition(ChaHubSaveMixin, models.Model):
     is_migrating_delayed = models.BooleanField(default=False)
     allow_teams = models.BooleanField(default=False)
     enable_per_submission_metadata = models.BooleanField(default=False, help_text="(Team name, Method name, Method description, etc.)")
-    allow_public_submissions = models.BooleanField(default=False, verbose_name=ugettext("Allow sharing of public submissions"))
+    allow_public_submissions = models.BooleanField(default=False, verbose_name="Allow sharing of public submissions")
     enable_forum = models.BooleanField(default=False)
     anonymous_leaderboard = models.BooleanField(default=False)
-    enable_teams = models.BooleanField(default=False, verbose_name=ugettext("Enable Competition level teams"))
-    require_team_approval = models.BooleanField(default=True, verbose_name=ugettext("Organizers need to approve the new teams"))
+    enable_teams = models.BooleanField(default=False, verbose_name="Enable Competition level teams")
+    require_team_approval = models.BooleanField(default=True, verbose_name="Organizers need to approve the new teams")
     teams = models.ManyToManyField(Team, related_name='competition_teams', blank=True, null=True)
     hide_top_three = models.BooleanField(default=False, verbose_name="Hide Top Three Leaderboard")
     hide_chart = models.BooleanField(default=False, verbose_name="Hide Chart")
+    allow_organizer_teams = models.BooleanField(default=False, verbose_name="Allow Organizer Teams")
 
     competition_docker_image = models.CharField(max_length=128, default='', blank=True)
 
@@ -345,6 +345,7 @@ class Competition(ChaHubSaveMixin, models.Model):
             "html_text": html_text,
             "active": active,
             "prize": self.reward,
+            "url_redirect": self.url_redirect
         }
 
     def save(self, *args, **kwargs):
@@ -600,13 +601,13 @@ class Page(models.Model):
     category = TreeForeignKey(ContentCategory)
     defaults = models.ForeignKey(DefaultContentItem, null=True, blank=True)
     codename = models.SlugField(max_length=100)
-    container = models.ForeignKey(PageContainer, related_name='pages', verbose_name=ugettext("Page Container"))
+    container = models.ForeignKey(PageContainer, related_name='pages', verbose_name="Page Container")
     title = models.CharField(max_length=100, null=True, blank=True) # TODO, probably needs to be removed
-    label = models.CharField(max_length=100, verbose_name=ugettext("Title"))
+    label = models.CharField(max_length=100, verbose_name="Title")
     rank = models.IntegerField(default=0, verbose_name="Order")
-    visibility = models.BooleanField(default=True, verbose_name=ugettext("Visible"))
+    visibility = models.BooleanField(default=True, verbose_name="Visible")
     markup = models.TextField(blank=True)
-    html = models.TextField(blank=True, verbose_name=ugettext("Content"))
+    html = models.TextField(blank=True, verbose_name="Content")
     competition = models.ForeignKey(Competition, related_name='pages', null=True)
 
     def __unicode__(self):
@@ -816,26 +817,26 @@ class CompetitionPhase(models.Model):
     competition = models.ForeignKey(Competition, related_name='phases')
     description = models.CharField(max_length=1000, null=True, blank=True)
     # Is this 0 based or 1 based?
-    phasenumber = models.PositiveIntegerField(verbose_name=ugettext("Number"))
-    label = models.CharField(max_length=50, blank=True, verbose_name=ugettext("Name"))
-    start_date = models.DateTimeField(verbose_name="Start Date")
-    max_submissions = models.PositiveIntegerField(default=100, verbose_name=ugettext("Maximum Submissions for per User"))
-    max_submissions_per_day = models.PositiveIntegerField(default=999, verbose_name=ugettext("Max Submissions for per User per day"))
+    phasenumber = models.PositiveIntegerField(verbose_name="Number")
+    label = models.CharField(max_length=50, blank=True, verbose_name="Name")
+    start_date = models.DateTimeField(verbose_name="Start Date (UTC)")
+    max_submissions = models.PositiveIntegerField(default=100, verbose_name="Maximum Submissions (per User)")
+    max_submissions_per_day = models.PositiveIntegerField(default=999, verbose_name="Max Submissions (per User) per day")
     is_scoring_only = models.BooleanField(default=True, verbose_name="Results Scoring Only")
-    scoring_program = models.FileField(upload_to=_uuidify('phase_scoring_program_file'), storage=BundleStorage,null=True,blank=True, verbose_name=ugettext("Scoring Program"))
-    reference_data = models.FileField(upload_to=_uuidify('phase_reference_data_file'), storage=BundleStorage,null=True,blank=True, verbose_name=ugettext("Reference Data"))
-    input_data = models.FileField(upload_to=_uuidify('phase_input_data_file'), storage=BundleStorage,null=True,blank=True, verbose_name=ugettext("Input Data"))
+    scoring_program = models.FileField(upload_to=_uuidify('phase_scoring_program_file'), storage=BundleStorage,null=True,blank=True, verbose_name="Scoring Program")
+    reference_data = models.FileField(upload_to=_uuidify('phase_reference_data_file'), storage=BundleStorage,null=True,blank=True, verbose_name="Reference Data")
+    input_data = models.FileField(upload_to=_uuidify('phase_input_data_file'), storage=BundleStorage,null=True,blank=True, verbose_name="Input Data")
     datasets = models.ManyToManyField(Dataset, blank=True, related_name='phase')
-    leaderboard_management_mode = models.CharField(max_length=50, default=LeaderboardManagementMode.DEFAULT, verbose_name=ugettext("Leaderboard Mode"))
-    force_best_submission_to_leaderboard = models.BooleanField(default=False, verbose_name=ugettext("If submission beats old score, put submission on leaderboard"))
+    leaderboard_management_mode = models.CharField(max_length=50, default=LeaderboardManagementMode.DEFAULT, verbose_name="Leaderboard Mode")
+    force_best_submission_to_leaderboard = models.BooleanField(default=False, verbose_name="If submission beats old score, put submission on leaderboard")
     auto_migration = models.BooleanField(default=False)
     is_migrated = models.BooleanField(default=False)
-    execution_time_limit = models.PositiveIntegerField(default=(5 * 60), verbose_name=ugettext("Execution time limit in seconds"))
+    execution_time_limit = models.PositiveIntegerField(default=(5 * 60), verbose_name="Execution time limit (in seconds)")
     color = models.CharField(max_length=24, choices=COLOR_CHOICES, blank=True, null=True)
 
-    input_data_organizer_dataset = models.ForeignKey('OrganizerDataSet', null=True, blank=True, related_name="input_data_organizer_dataset", verbose_name=ugettext("Input Data"), on_delete=models.SET_NULL)
-    reference_data_organizer_dataset = models.ForeignKey('OrganizerDataSet', null=True, blank=True, related_name="reference_data_organizer_dataset", verbose_name=ugettext("Reference Data"), on_delete=models.SET_NULL)
-    scoring_program_organizer_dataset = models.ForeignKey('OrganizerDataSet', null=True, blank=True, related_name="scoring_program_organizer_dataset", verbose_name=ugettext("Scoring Program"), on_delete=models.SET_NULL)
+    input_data_organizer_dataset = models.ForeignKey('OrganizerDataSet', null=True, blank=True, related_name="input_data_organizer_dataset", verbose_name="Input Data", on_delete=models.SET_NULL)
+    reference_data_organizer_dataset = models.ForeignKey('OrganizerDataSet', null=True, blank=True, related_name="reference_data_organizer_dataset", verbose_name="Reference Data", on_delete=models.SET_NULL)
+    scoring_program_organizer_dataset = models.ForeignKey('OrganizerDataSet', null=True, blank=True, related_name="scoring_program_organizer_dataset", verbose_name="Scoring Program", on_delete=models.SET_NULL)
     phase_never_ends = models.BooleanField(default=False)
 
     scoring_program_docker_image = models.CharField(max_length=128, default='', blank=True)
@@ -1100,7 +1101,7 @@ class CompetitionPhase(models.Model):
             for header in headers:
                 header['subs'].sort(key=sortkey, reverse=False)
             # compute total column span
-            column_span = 4 
+            column_span = 4
             for gHeader in headers:
                 n = len(gHeader['subs'])
                 column_span += n if n > 0 else 1
@@ -1330,6 +1331,7 @@ class CompetitionSubmission(ChaHubSaveMixin, models.Model):
     is_migrated = models.BooleanField(default=False) # Will be used to auto  migrate
 
     # Team of the user in the moment of the submission
+    # This field is not used anywhere we can see 4/18/2018
     team = models.ForeignKey(Team, related_name='team', null=True, blank=True)
 
     queue_name = models.TextField(null=True, blank=True)
@@ -1754,13 +1756,13 @@ class CompetitionDefBundle(models.Model):
 
         # Populate competition pages
         pc,_ = PageContainer.objects.get_or_create(object_id=comp.id, content_type=ContentType.objects.get_for_model(comp))
-        details_category = ContentCategory.objects.get(name="比赛细则")
+        details_category = ContentCategory.objects.get(name="Learn the Details")
         Page.objects.create(category=details_category, container=pc,  codename="overview", competition=comp,
-                                   label="规则综述", rank=0, html=zf.read(comp_spec['html']['overview']))
+                                   label="Overview", rank=0, html=zf.read(comp_spec['html']['overview']))
         Page.objects.create(category=details_category, container=pc,  codename="evaluation", competition=comp,
-                                   label="评分准则", rank=1, html=zf.read(comp_spec['html']['evaluation']))
+                                   label="Evaluation", rank=1, html=zf.read(comp_spec['html']['evaluation']))
         Page.objects.create(category=details_category, container=pc,  codename="terms_and_conditions", competition=comp,
-                                   label="比赛条款", rank=2, html=zf.read(comp_spec['html']['terms']))
+                                   label="Terms and Conditions", rank=2, html=zf.read(comp_spec['html']['terms']))
 
         default_pages = ('overview', 'evaluation', 'terms', 'data')
 
@@ -1776,13 +1778,13 @@ class CompetitionDefBundle(models.Model):
                     html=zf.read(page_data)
                 )
 
-        participate_category = ContentCategory.objects.get(name="参与比赛")
+        participate_category = ContentCategory.objects.get(name="Participate")
         Page.objects.create(
             category=participate_category,
             container=pc,
             codename="get_data",
             competition=comp,
-            label="获取数据",
+            label="Get Data",
             rank=0,
             html=zf.read(comp_spec['html']['data'])
         )
@@ -1791,7 +1793,7 @@ class CompetitionDefBundle(models.Model):
             container=pc,
             codename="get_starting_kit",
             competition=comp,
-            label="比赛附件",
+            label="Files",
             rank=1,
             html=""
         )
@@ -1799,7 +1801,7 @@ class CompetitionDefBundle(models.Model):
             category=participate_category,
             container=pc,
             codename="submit_results",
-            label="提交结果/查看提交",
+            label="Submit / View Results",
             rank=2,
             html=""
         )
@@ -2408,21 +2410,11 @@ def get_first_previous_active_and_next_phases(competition):
         # Get an active phase that isn't also never-ending, unless we don't have any active_phases
         if phase.is_active:
             previous_phase = trailing_phase_holder
-            if active_phase is None:
-                active_phase = phase
-            elif not phase.phase_never_ends:
-                active_phase = phase
-
-            try:
-                next_phase = next(phase_iterator)
-            except StopIteration:
-                pass
-
-            if not active_phase.phase_never_ends:
-                # The phase has a definite ending, so we can stop here using this
-                # as the active phase and next (if applicable) is already grabbed
-                # from the iterator
-                break
+            active_phase = phase
+        else:
+            # we have an active phase but this one isn't active so it must be next
+            if active_phase and not next_phase:
+                next_phase = phase
 
         # Hold this to store "previous phase"
         trailing_phase_holder = phase
@@ -2454,14 +2446,3 @@ class CompetitionDump(models.Model):
 
     def filename(self):
         return os.path.basename(self.data_file.name)
-
-
-class Document(models.Model):
-    creator = models.ForeignKey(settings.AUTH_USER_MODEL)
-#    name = models.CharField(max_length=100)
-#    source_url = models.URLField()
-#    source_address_info = models.CharField(max_length=200, blank=True)
-
-    docfile = models.FileField(upload_to='documentss/%Y/%m/%d')
-    def __unicode__(self):
-        return self.name
