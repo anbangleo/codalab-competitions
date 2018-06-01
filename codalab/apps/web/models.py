@@ -2455,3 +2455,9 @@ class CompetitionDump(models.Model):
 
     def filename(self):
         return os.path.basename(self.data_file.name)
+
+class Document(models.Model):
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL)
+    docfile = models.FileField(upload_to='documentss/%Y/%m/%d')
+    def __unicode__(self):
+        return self.name
