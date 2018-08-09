@@ -104,7 +104,7 @@ function checkform() {
 
                 <th align="right">样本类别</th>
                 <td align="left"><input type="radio" name = "kind" value = "text" checked>文本
-                                    <input type="radio" name = "kind" value = "image" >图片</td>
+                                    <!--<input type="radio" name = "kind" value = "image" >图片</td>-->
             </tr>
             <tr>
 
@@ -186,7 +186,6 @@ function checkform() {
                                     <p> 【错误！】你上传的不是压缩包.zip文件。上传的压缩包文件格式，请参照 </p>
                     {% endif %}
             </form>
-
             {% if ifzip == 1 %}
             {% if di %}
             <tr>
@@ -196,8 +195,6 @@ function checkform() {
                 </td>
             </tr>
             {% endif %}
-
-
 
             <tr>
                 <th>执行结果</th>

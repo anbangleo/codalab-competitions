@@ -17,7 +17,7 @@ import copy
 import os
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 
 import zipfile
@@ -28,6 +28,8 @@ import csv
 import json
 import base64
 import heapq
+matplotlib.use('Agg')
+
 try:
     from sklearn.model_selection import train_test_split
 except ImportError:
@@ -55,8 +57,8 @@ class BinaryClassTest(object):
         # dataset_train = zipfile.ZipFile(docfile).read(traintext).decode('utf-8')
         # dataset_unlabel = zipfile.ZipFile(docfile).read(unlabeltext).decode('utf-8')
 
-        #todo need to change it to path
-        #原训练集
+        # todo need to change it to path
+        # 原训练集
         x_train, label_train = import_libsvm_sparse(traintext).format_sklearn()
         numoftrain = len(x_train)
 
@@ -146,12 +148,8 @@ class BinaryClassTest(object):
         js = json.dumps(jsontosend)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('10.2.26.114', 11223))
-
-
         s.send('c')
         time.sleep(0.2)
-
-
         s.send(js)
 
         time.sleep(0.5)
@@ -286,7 +284,7 @@ class BinaryClassTest(object):
         trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
         unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
         testentity = '/app/codalab/thirdpart/'+username+'/'+ 'test.txt'
-        #[Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
+        # [Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
         #1是提交的两个文件，一个训练集一个测试集。
         # trainAndtest = 1
         # testsize = 0.33
@@ -296,7 +294,7 @@ class BinaryClassTest(object):
         #interlabel = ['0','1']
         askidlist = []
 
-        #Todo:ask_id是问的train+unlabel中unlabel的id
+        # Todo:ask_id是问的train+unlabel中unlabel的id
 
 
         unlabeldatasetdir = '/app/codalab/thirdpart/'+username+'/unlabel'
@@ -308,21 +306,21 @@ class BinaryClassTest(object):
 
         #提交的是Train还是Train+Test
         if trainAndtest == 1:
-            trn_ds,numoftrain,unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
+            trn_ds, numoftrain, unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
             tst_ds = self.split_onlytest(testentity)
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
         else:
-            #提交的只有一个Train
+            # 提交的只有一个Train
             trn, trn_label, tst_ds = self.split_train_test(trainentity,testsize)
-            trn_ds,numoftrain,unlabelnames = self.split_train_test_unlabel(trn, trn_label, unlabelentity)
+            trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(trn, trn_label, unlabelentity)
             real_trn_ds = copy.deepcopy(trn_ds)
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
 
         trn_ds_random = copy.deepcopy(none_trn_ds)#原验证集强行划分部分未知None做效果用
         qs_random = RandomSampling(trn_ds_random)
-#================================logic========================
-        #Todo:补充多种策略、算法
+# ================================logic========================
+        # Todo:补充多种策略、算法
         if modelselect == 'logic':
             if strategy == 'binary':
                 if algorithm == 'qbc':
@@ -333,9 +331,9 @@ class BinaryClassTest(object):
                     qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
                 elif algorithm == 'albl':
                     qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[UncertaintySampling(trn_ds,method='lc', model=LogisticRegression()),QueryByCommittee(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],),],
-                     T=quota,
-                     uniform_sampler=True,
-                     model=LogisticRegression()
+                         T=quota,
+                         uniform_sampler=True,
+                         model=LogisticRegression()
                      )
                     qs_fordraw = ActiveLearningByLearning(none_trn_ds,
                             query_strategies=[UncertaintySampling(none_trn_ds,method='lc', model=LogisticRegression()),
@@ -462,8 +460,6 @@ class BinaryClassTest(object):
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
             max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
-
-
             for ask_id in max_n:
                 filename = unlabelnames[ask_id]
                 if filename.split('/')[-1] in unlabeldatasetdir:
