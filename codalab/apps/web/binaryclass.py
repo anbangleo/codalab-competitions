@@ -207,8 +207,6 @@ class BinaryClassTest(object):
         #if n_labeled < 1:
         #    n_labeled = 1
 
-
-
         x_train,y_train = trn_ds.format_sklearn()[0],trn_ds.format_sklearn()[1]
 
         try:
@@ -223,11 +221,11 @@ class BinaryClassTest(object):
         except:
             for i in range(len(y_train)):
                 if y_train[i] != y_train[i+1]:
-                    flag=1
-                    n_labeled = i+2
+                    flag = 1
+                    n_labeled = i + 2
                     break
                 flag = -1
-        if flag ==-1:
+        if flag == -1:
             pass#[todo]报错
 
 
@@ -276,8 +274,71 @@ class BinaryClassTest(object):
         plt.clf()
         plt.close()
 
+    def LogicRegression(self, algorithm, trn_ds, none_trn_ds):
+        if algorithm == 'qbc':
+            qs = QueryByCommitteePlus(trn_ds, models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
+            qs_fordraw = QueryByCommittee(none_trn_ds,
+                                          models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
+        elif algorithm == 'us':
+            qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
+            qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
+        elif algorithm == 'albc':
+            qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
+                UncertaintySampling(trn_ds, method='lc', model=LogisticRegression()),
+                QueryByCommittee(trn_ds, models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], ), ],
+                                              T=quota,
+                                              uniform_sampler=True,
+                                              model=LogisticRegression()
+                                              )
+            qs_fordraw = ActiveLearningByLearning(none_trn_ds,
+                                                  query_strategies=[UncertaintySampling(none_trn_ds, method='lc',
+                                                                                        model=LogisticRegression()),
+                                                                    QueryByCommittee(none_trn_ds,
+                                                                                     models=[LogisticRegression(C=1.0),
+                                                                                             LogisticRegression(
+                                                                                                 C=0.4), ], ), ],
+                                                  T=quota,
+                                                  uniform_sampler=True,
+                                                  model=LogisticRegression()
+                                                  )
+        elif algorithm == 'dal':
+            #  [todo] add dal
+        else:
+            pass
 
+        return qs, qs_fordraw
 
+    def svmClassify(self, algorithm, trn_ds, none_trn_ds):
+        if algorithm == 'qbc':
+            qs = QueryByCommitteePlus(trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                      SVM(C=0.4, decision_function_shape='ovr'), ], )
+            qs_fordraw = QueryByCommittee(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                               SVM(C=0.4, decision_function_shape='ovr'), ], )
+        elif algorithm == 'us':
+            qs = UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr'))
+            qs_fordraw = UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr'))
+        elif algorithm == 'albl':
+            qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
+                UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr')), QueryByCommittee(trn_ds, models=[
+                    SVM(C=1.0, decision_function_shape='ovr'), SVM(C=0.4, decision_function_shape='ovr'), ], ), ],
+                                              T=quota,
+                                              uniform_sampler=True,
+                                              model=SVM(kernel='linear', decision_function_shape='ovr')
+                                              )
+            qs_fordraw = ActiveLearningByLearning(none_trn_ds, query_strategies=[
+                UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr')),
+                QueryByCommittee(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                      SVM(C=0.4, decision_function_shape='ovr'), ], ), ],
+                                                  T=quota,
+                                                  uniform_sampler=True,
+                                                  model=SVM(kernel='linear', decision_function_shape='ovr')
+                                                  )
+        elif algorithm == 'dal':
+            # [todo] add dal
+        else:
+            pass
+
+        return qs, qs_fordraw
 
     def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
@@ -295,7 +356,6 @@ class BinaryClassTest(object):
         askidlist = []
 
         # Todo:ask_id是问的train+unlabel中unlabel的id
-
 
         unlabeldatasetdir = '/app/codalab/thirdpart/'+username+'/unlabel'
 
@@ -317,98 +377,46 @@ class BinaryClassTest(object):
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
 
-        trn_ds_random = copy.deepcopy(none_trn_ds)#原验证集强行划分部分未知None做效果用
+        trn_ds_random = copy.deepcopy(none_trn_ds) # 原验证集强行划分部分未知None做效果用
         qs_random = RandomSampling(trn_ds_random)
-# ================================logic========================
-        # Todo:补充多种策略、算法
-        if modelselect == 'logic':
-            if strategy == 'binary':
-                if algorithm == 'qbc':
-                    qs = QueryByCommitteePlus(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
-                    qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
-                elif algorithm == 'us':
-                    qs = UncertaintySampling(trn_ds,method='lc', model=LogisticRegression())
-                    qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
-                elif algorithm == 'albl':
-                    qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[UncertaintySampling(trn_ds,method='lc', model=LogisticRegression()),QueryByCommittee(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],),],
-                         T=quota,
-                         uniform_sampler=True,
-                         model=LogisticRegression()
-                     )
-                    qs_fordraw = ActiveLearningByLearning(none_trn_ds,
-                            query_strategies=[UncertaintySampling(none_trn_ds,method='lc', model=LogisticRegression()),
-                                              QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],),],
-                                                       T=quota,
-                                                       uniform_sampler=True,
-                                                       model=LogisticRegression()
-                                              )
 
-                else:
-                    pass
+# ========================Binary====================
+        if strategy == 'binary':
+            if modelselect == 'logic':
+                qs, qs_fordraw = LogisticRegression(algorithm, trn_ds, none_trn_ds)
                 model = LogisticRegression()
-            elif strategy == 'multiclass':#[todo]need to be improved
-                if algorithm == 'qbc':
-                    qs = QueryByCommitteePlus(trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
-                    qs_fordraw = QueryByCommittee(none_trn_ds,models=[LogisticRegression(C=1.0),LogisticRegression(C=0.4),],)
-                elif algorithm == 'us':
-                    qs = UncertaintySampling(trn_ds,method='lc', model=LogisticRegression())
-                    qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
-
-                else:
-                    pass
+                lbr = IdealLabeler(real_trn_ds)
+                E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
                 model = LogisticRegression()
-
-            else: #multilabel
+                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
+            elif modelselect == 'svm':
+                qs, qs_fordraw = svmClassfiy(algorithm, trn_ds, none_trn_ds)
+                lbr = IdealLabeler(real_trn_ds)
+                model = SVM(kernel='linear', decision_function_shape='ovr')
+                E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
+                model = SVM(kernel='linear', decision_function_shape='ovr')
+                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
+            else:
                 pass
-
-            lbr = IdealLabeler(real_trn_ds)
-
-            E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
-            model = LogisticRegression()
-
-            E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
-
-
-#================================svm========================
-        elif modelselect == 'svm':
-            if strategy == 'binary':
-                if algorithm == 'qbc':
-                    qs = QueryByCommitteePlus(trn_ds,models=[SVM(C=1.0, decision_function_shape='ovr'),SVM(C=0.4, decision_function_shape='ovr'),],)
-                    qs_fordraw = QueryByCommittee(none_trn_ds,models=[SVM(C=1.0, decision_function_shape='ovr'),SVM(C=0.4, decision_function_shape='ovr'),],)
-                elif algorithm == 'us':
-                    qs = UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr'))
-                    qs_fordraw = UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr'))
-                elif algorithm == 'albl':
-                    qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[UncertaintySampling(trn_ds,model=SVM(decision_function_shape='ovr')),QueryByCommittee(trn_ds,models=[SVM(C=1.0, decision_function_shape='ovr'),SVM(C=0.4, decision_function_shape='ovr'),],),],
-                     T=quota,
-                     uniform_sampler=True,
-                     model=SVM(kernel='linear', decision_function_shape='ovr')
-                     )
-                    qs_fordraw = ActiveLearningByLearning(none_trn_ds, query_strategies=[UncertaintySampling(none_trn_ds,model=SVM(decision_function_shape='ovr')),QueryByCommittee(none_trn_ds,models=[SVM(C=1.0, decision_function_shape='ovr'),SVM(C=0.4, decision_function_shape='ovr'),],),],
-                                                       T=quota,
-                                                       uniform_sampler=True,
-                                                       model=SVM(kernel='linear', decision_function_shape='ovr')
-                                                       )
-                else:
-                    pass
-
-            elif strategy == 'multiclass':
+        elif strategy == 'multiclass':
+            if modelselect == 'svm':
+                qs, qs_fordraw = svmClassfiy(algorithm, trn_ds, none_trn_ds)
+                lbr = IdealLabeler(real_trn_ds)
+                model = SVM(kernel='linear', decision_function_shape='ovr')
+                E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
+                model = SVM(kernel='linear', decision_function_shape='ovr')
+                E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
+            else:
                 pass
+        elif strategy == 'multilabel':
+            pass
 
-            else: #multilabel
-                pass
-
-            lbr = IdealLabeler(real_trn_ds)
-
-            model = SVM(kernel='linear', decision_function_shape='ovr')
-            E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
-            model = SVM(kernel='linear', decision_function_shape='ovr')
-            E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
         else:
             pass
 
 
-        self.plotforimage(np.arange(1,quota+1),E_in1,E_in2,E_out1,E_out2,username)
+
+        self.plotforimage(np.arange(1, quota + 1), E_in1, E_in2, E_out1, E_out2, username)
 
 
 #dir = '/app/codalab/static/img/partpicture/'+username+'/'
