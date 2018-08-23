@@ -45,11 +45,40 @@ from libact.labelers import InteractiveLabeler
 from libact.labelers import IdealLabeler
 from query_by_committee_plus import QueryByCommitteePlus
 from active_learning_by_learning_plus import ActiveLearningByLearningPlus
+import matplotlib.pyplot as plt
+
+try:
+    from sklearn.model_selection import train_test_split
+except ImportError:
+    from sklearn.cross_validation import train_test_split
+
+# libact classes
+from libact.base.dataset import Dataset, import_libsvm_sparse
+from libact.models import *
+from libact.query_strategies import *
+from libact.labelers import IdealLabeler
+import tensorflow.contrib.keras as kr
+# from cp-cnews_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
+
+from deeplearning.dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab
+import time
+from datetime import timedelta
+import heapq
+from data.rnnmodel import RNN_Probability_Model,TRNNConfig
+import random
+
 class BinaryClassTest(object):
     def __init__(self):
         pass
 
-    def split_train_and_unlabel(self, traintext, unlabeltext):
+    def get_time_dif(start_time):
+        """获取已使用时间"""
+        end_time = time.time()
+        time_dif = end_time - start_time
+        return timedelta(seconds=int(round(time_dif)))
+
+    # 提交的是Train和Test，此时只需要处理Train即可，将Train和Unlabel组合
+    def split_train_and_unlabel(self, train_dir, unlabel_dir, vocab_dir, vocab_size):
         # dataset_train = os.path.join(
         #     os.path.dirname(os.path.realpath(__file__)), traintext)
         # dataset_unlabel = os.path.join(
@@ -57,64 +86,162 @@ class BinaryClassTest(object):
         # dataset_train = zipfile.ZipFile(docfile).read(traintext).decode('utf-8')
         # dataset_unlabel = zipfile.ZipFile(docfile).read(unlabeltext).decode('utf-8')
 
+        if not os.path.exists(vocab_dir):
+            build_vocab(train_dir, vocab_dir, vocab_size)
+        categories, cat_to_id = read_category(categories_class)
+        words, word_to_id = read_vocab(vocab_dir)
+
+        x_train, y_train = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+        listy = []
+        for i in range(np.shape(y)[0]):
+            for j in range(np.shape(y)[1]):
+                if y[i][j] == 1:
+                    listy.append(j)
+        listy = np.array(listy)
+
+        x_train, x_test, y_train, y_test = \
+            train_test_split(x_train, listy, test_size=1)
         # todo need to change it to path
+
         # 原训练集
-        x_train, label_train = import_libsvm_sparse(traintext).format_sklearn()
-        numoftrain = len(x_train)
+        # x_intrain, label_train = import_libsvm_sparse(traintext).format_sklearn()
+        # numoftrain = len(x_train)
 
         #未标记集
+
+
         allunlabel = np.loadtxt(unlabeltext, dtype = str)
 
         #减1减去的是unlabel向量的[名称]
-        unlabel_data = np.zeros((np.shape(allunlabel)[0],np.shape(allunlabel)[1]-1))
+            # unlabel_data = np.zeros((np.shape(allunlabel)[0],np.shape(allunlabel)[1]-1))
         unlabel_name = []
+        # x_unlabel and y_unlabel is np.array
+        x_unlabel, y_unlabel = process_file(unlabel_dir, word_to_id, cat_to_id, wordslength)
 
         for i in range(np.shape(allunlabel)[0]):
             unlabel_name.append(allunlabel[i][0])
-            for j in range(np.shape(allunlabel)[1]-1):
-                unlabel_data[i][j] = allunlabel[i][j+1].split(':')[1]
+            # for j in range(np.shape(allunlabel)[1]-1):
+            #     unlabel_data[i][j] = allunlabel[i][j+1].split(':')[1]
 
-        x = np.vstack((x_train, unlabel_data))
-        y = np.hstack((label_train,[None]*len(allunlabel)))
+        x = np.vstack(x_train, x_unlabel)
+        y = np.hstack(y_train,[None]*len(y_unlabel))
 
-        trn_ds = Dataset(x,y)
-        real_trn_ds = Dataset(x_train,label_train)
+        trn_ds = Dataset(x, y)
+        real_trn_ds = Dataset(x_train, y_train)
 
         #返回训练集，训练集的个数，未标记数据的名称list
         return trn_ds, numoftrain, unlabel_name,real_trn_ds
 
+    def split_train_test_al(self, train_dir, vocab_dir, test_size, n_labeled, wordslength):
+        if not os.path.exists(vocab_dir):
+            build_vocab(train_dir, vocab_dir, 1000)
+        categories, cat_to_id = read_category()
+        words, word_to_id = read_vocab(vocab_dir)
 
-    def split_onlytest(self, localdir):
+        x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+        # x_rnn, y_rnn = process_file_rnn(train_dir, word_to_id, cat_to_id, 600)
+
+        listy = []
+        for i in range(np.shape(y)[0]):
+            for j in range(np.shape(y)[1]):
+                if y[i][j] == 1:
+                    listy.append(j)
+        listy = np.array(listy)
+
+        X_train, X_test, y_train, y_test = \
+            train_test_split(x, listy, test_size=test_size)
+
+        # X_train = X_train[:(n_labeled + 24)]
+        trn_ds = Dataset(X_train, np.concatenate(
+            [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
+        # trn_ds = Dataset(X_train, np.concatenate(
+        #     [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
+        fully_tst_ds = Dataset(X_test, y_test)
+
+        X_val, X_real_test, y_val, y_real_test = \
+            train_test_split(X_test, y_test, test_size=0.5)
+
+        tst_ds = Dataset(X_real_test, y_real_test)
+        val_ds = Dataset(X_val, y_val)
+
+        fully_labeled_trn_ds = Dataset(X_train, y_train)
+        #    print (fully_labeled_trn_ds.get_entries()[0])
+        return trn_ds, tst_ds, y_train, fully_labeled_trn_ds, fully_tst_ds, val_ds
+
+    def split_onlytest(self, test_dir, vocab_dir, wordslength):
         #返回测试集样例
         # dataset_train = os.path.join(
         #     os.path.dirname(os.path.realpath(__file__)), localdir)
         # dataset_train = zipfile.ZipFile(docfile).read(localdir).decode('utf-8')
-        dataset_train = localdir
-        x, y = import_libsvm_sparse(dataset_train).format_sklearn()
-        test_ds = Dataset(x,y)
+
+        if not os.path.exists(vocab_dir):
+            build_vocab(train_dir, vocab_dir, 1000)
+        categories, cat_to_id = read_category()
+        words, word_to_id = read_vocab(vocab_dir)
+        x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+
+        listy = []
+        for i in range(np.shape(y)[0]):
+            for j in range(np.shape(y)[1]):
+                if y[i][j] == 1:
+                    listy.append(j)
+        listy = np.array(listy)
+        X_test, X_train, y_test, y_train = \
+            train_test_split(x, listy, test_size=1)
+
+        test_ds =  Dataset(X_test, y_test)
         return test_ds
+        # x, y = import_libsvm_sparse(dataset_train).format_sklearn()
+        # test_ds = Dataset(x,y)
+        # return test_ds
 
+    # 【上传只有train】，随机划分一部分做test
+    def split_train_test (self, train_dir, vocab_dir, test_size, wordslength):
+        if not os.path.exists(vocab_dir):
+            build_vocab(train_dir, vocab_dir, 1000)
 
-    def split_train_test (self, localdir, test_size):
-        dataset_train = localdir
-        x, y = import_libsvm_sparse(dataset_train).format_sklearn()
-        X_train, X_test, label_train, label_test = train_test_split(x, y, test_size=test_size)
+        categories, cat_to_id = read_category()
+        words, word_to_id = read_vocab(vocab_dir)
+
+        x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+        # x_rnn, y_rnn = process_file_rnn(train_dir, word_to_id, cat_to_id, 600)
+
+        listy = []
+        for i in range(np.shape(y)[0]):
+            for j in range(np.shape(y)[1]):
+                if y[i][j] == 1:
+                    listy.append(j)
+        listy = np.array(listy)
+
+        # dataset_train = train_dir
+        # x, y = import_libsvm_sparse(dataset_train).format_sklearn()
+
+        X_train, X_test, y_train, y_test = train_test_split(x, listy, test_size=test_size)
+
         #train_ds = Dataset(X_train,label_train)
-        test_ds = Dataset(X_test, label_test)
+        fully_tst_ds = Dataset(X_test, y_test)
 
-        return X_train,label_train,test_ds
+        X_val, X_real_test, y_val, y_real_test = \
+            train_test_split(X_test, y_test, test_size=0.5)
 
+        tst_ds = Dataset(X_real_test, y_real_test)
+        val_ds = Dataset(X_val, y_val)
+
+        # fully_labeled_trn_ds = Dataset(X_train, y_train)
+
+
+        return X_train, y_train, fully_tst_ds, tst_ds, val_ds
+
+    # 把Train.txt和Unlabel.txt 两个文件结合起来，形成一个
     def split_train_test_unlabel(self, train, trainlabel, unlabeltext):
 
-        dataset_unlabel = unlabeltext
         #原训练集
         numoftrain = len(train)
-
         #未标记集
-        allunlabel = np.loadtxt(dataset_unlabel, dtype = str)
+        allunlabel = np.loadtxt(unlabeltext, dtype = str)
 
         #减1减去的是unlabel向量的[名称]
-        unlabel_data = np.zeros((np.shape(allunlabel)[0],np.shape(allunlabel)[1]-1))
+        unlabel_data = np.zeros((np.shape(allunlabel)[0], np.shape(allunlabel)[1]-1))
         unlabel_name = []
 
         for i in range(np.shape(allunlabel)[0]):
@@ -369,10 +496,12 @@ class BinaryClassTest(object):
             trn_ds, numoftrain, unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
             tst_ds = self.split_onlytest(testentity)
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
+
+        # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
             # 提交的只有一个Train
-            trn, trn_label, tst_ds = self.split_train_test(trainentity,testsize)
-            trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(trn, trn_label, unlabelentity)
+            X_train, y_train, fully_tst_ds, tst_ds, val_ds = self.split_train_test(trainentity,testsize)
+            trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(X_train, y_train, unlabelentity)
             real_trn_ds = copy.deepcopy(trn_ds)
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
