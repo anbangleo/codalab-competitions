@@ -59,15 +59,35 @@ def read_file(filename):
                 pass
     return contents, labels
 
-
-def build_vocab(train_dir, vocab_dir, vocab_size=1000):
+# 可变参数为可能的【未标注集】
+def build_vocab(train_dir, vocab_dir, vocab_size=1000, *args):
     """根据训练集构建词汇表，存储"""
     data_train, _ = read_file(train_dir)
+
     print ("start to build vob....")
     all_data = []
-    # print (data_train) 
+    # print (data_train)
+
     for content in data_train:
         all_data.extend(content)
+    # 提交的有一个未标记集
+    if len(args) == 1:
+        none_dataset = args[0]
+        unlabel_data_train, unlabel_cat = read_file(none_dataset)
+        for content in unlabel_data_train:
+            all_data.extend(content)
+    # 提交的是未标记集 + 测试集
+    elif len(none_dataset) == 2:
+        none_dataset = args[0]
+        test_dataset = args[1]
+        unlabel_data_train, unlabel_cat = read_file(none_dataset)
+        for content in unlabel_data_train:
+            all_data.extend(content)
+        test_data, test_cat = read_file(test_dataset)
+        for content in test_data:
+            all_data.extend(content)
+    else:
+        pass
 
     counter = Counter(all_data)
     count_pairs = counter.most_common(vocab_size - 1)
@@ -197,8 +217,6 @@ def process_file_rnn(filename, word_to_id, cat_to_id, max_length=600):
     for i in range(len(contents)):
         data_id.append([word_to_id[x] for x in contents[i] if x in word_to_id])##把contents中的每一个词用word_to_id中id表示
         label_id.append(cat_to_id[labels[i]])
-
-
 
     # x_pad = kr.preprocessing.sequence.pad_sequences(data_id, max_length)
     # y_pad = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))  # 将标签转换为one-hot表示

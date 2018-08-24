@@ -78,7 +78,7 @@ class BinaryClassTest(object):
         return timedelta(seconds=int(round(time_dif)))
 
     # 提交的是Train和Test，此时只需要处理Train即可，将Train和Unlabel组合
-    def split_train_and_unlabel(self, train_dir, unlabel_dir, vocab_dir, vocab_size):
+    def split_train_and_unlabel(self, train_dir, unlabel_dir, test_dir, vocab_dir, vocab_size):
         # dataset_train = os.path.join(
         #     os.path.dirname(os.path.realpath(__file__)), traintext)
         # dataset_unlabel = os.path.join(
@@ -87,7 +87,7 @@ class BinaryClassTest(object):
         # dataset_unlabel = zipfile.ZipFile(docfile).read(unlabeltext).decode('utf-8')
 
         if not os.path.exists(vocab_dir):
-            build_vocab(train_dir, vocab_dir, vocab_size)
+            build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
         categories, cat_to_id = read_category(categories_class)
         words, word_to_id = read_vocab(vocab_dir)
 
@@ -124,23 +124,24 @@ class BinaryClassTest(object):
             #     unlabel_data[i][j] = allunlabel[i][j+1].split(':')[1]
 
         x = np.vstack(x_train, x_unlabel)
-        y = np.hstack(y_train,[None]*len(y_unlabel))
+        y = np.hstack(y_train, [None]*len(y_unlabel))
 
         trn_ds = Dataset(x, y)
         real_trn_ds = Dataset(x_train, y_train)
 
         #返回训练集，训练集的个数，未标记数据的名称list
-        return trn_ds, numoftrain, unlabel_name,real_trn_ds
+        return trn_ds, numoftrain, unlabel_name, real_trn_ds
 
-    def split_train_test_al(self, train_dir, vocab_dir, test_size, n_labeled, wordslength):
+    def split_train_test_rnn(self, train_dir, vocab_dir, test_size, n_labeled, wordslength):
         if not os.path.exists(vocab_dir):
             build_vocab(train_dir, vocab_dir, 1000)
         categories, cat_to_id = read_category()
         words, word_to_id = read_vocab(vocab_dir)
 
-        x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+        data_id, label_id = process_file_rnn(train_dir, word_to_id, cat_to_id, wordslength)
         # x_rnn, y_rnn = process_file_rnn(train_dir, word_to_id, cat_to_id, 600)
 
+        y = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))
         listy = []
         for i in range(np.shape(y)[0]):
             for j in range(np.shape(y)[1]):
@@ -148,25 +149,58 @@ class BinaryClassTest(object):
                     listy.append(j)
         listy = np.array(listy)
 
-        X_train, X_test, y_train, y_test = \
-            train_test_split(x, listy, test_size=test_size)
+        X_train, X_val, y_train, y_val = \
+            train_test_split(data_id, listy, test_size = 0.9)
 
-        # X_train = X_train[:(n_labeled + 24)]
-        trn_ds = Dataset(X_train, np.concatenate(
+        X_train_al = []
+        X_test_al = []
+        res = []
+        for i in X_train:
+            for j in range(wordslength):
+                a = i.count(j)
+                if a > 0:
+                    res.append(a)
+                else:
+                    res.append(0)
+            X_train_al.append(res)
+            res = []
+
+        for i in X_val:
+            for j in range(wordslength):
+                a = i.count(j)
+                if a > 0:
+                    res.append(a)
+                else:
+                    res.append(0)
+            X_test_al.append(res)
+            res = []
+
+        X_train_al = np.array(X_train_al)
+        X_test_al = np.array(X_test_al)
+
+        trn_ds_al = Dataset(X_train_al, np.concatenate(
             [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
-        # trn_ds = Dataset(X_train, np.concatenate(
-        #     [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
-        fully_tst_ds = Dataset(X_test, y_test)
 
-        X_val, X_real_test, y_val, y_real_test = \
-            train_test_split(X_test, y_test, test_size=0.5)
+        tst_ds_al = Dataset(X_test_al, y_test)
 
-        tst_ds = Dataset(X_real_test, y_real_test)
-        val_ds = Dataset(X_val, y_val)
+        X_train_rnn = kr.preprocessing.sequence.pad_sequences(X_train, wordslength)
+        X_test_rnn = kr.preprocessing.sequence.pad_sequences(X_test, wordslength)
 
-        fully_labeled_trn_ds = Dataset(X_train, y_train)
-        #    print (fully_labeled_trn_ds.get_entries()[0])
-        return trn_ds, tst_ds, y_train, fully_labeled_trn_ds, fully_tst_ds, val_ds
+        X_train_rnn, X_val_rnn, y_train_rnn, y_val_rnn = \
+            train_test_split(X_train_rnn, y_train, test_size=val_size)
+
+        trn_ds_rnn = Dataset(X_train_rnn, np.concatenate(
+            [y_train_rnn[:n_labeled], [None] * (len(y_train_rnn) - n_labeled)]))
+
+        val_ds_rnn = Dataset(X_val_rnn, y_val_rnn)
+
+        tst_ds_rnn = Dataset(X_test_rnn, y_test)
+
+        fully_labeled_trn_ds_al = Dataset(X_train_al, y_train)
+        fully_labeled_trn_ds_rnn = Dataset(X_train_rnn, y_train_rnn)
+
+        return trn_ds_al, tst_ds_al, y_train_rnn, fully_labeled_trn_ds_al, \
+               trn_ds_rnn, tst_ds_rnn, fully_labeled_trn_ds_rnn, val_ds_rnn
 
     def split_onlytest(self, test_dir, vocab_dir, wordslength):
         #返回测试集样例
@@ -174,11 +208,9 @@ class BinaryClassTest(object):
         #     os.path.dirname(os.path.realpath(__file__)), localdir)
         # dataset_train = zipfile.ZipFile(docfile).read(localdir).decode('utf-8')
 
-        if not os.path.exists(vocab_dir):
-            build_vocab(train_dir, vocab_dir, 1000)
         categories, cat_to_id = read_category()
         words, word_to_id = read_vocab(vocab_dir)
-        x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+        x, y = process_file(test_dir, word_to_id, cat_to_id, wordslength)
 
         listy = []
         for i in range(np.shape(y)[0]):
@@ -189,7 +221,7 @@ class BinaryClassTest(object):
         X_test, X_train, y_test, y_train = \
             train_test_split(x, listy, test_size=1)
 
-        test_ds =  Dataset(X_test, y_test)
+        test_ds = Dataset(X_test, y_test)
         return test_ds
         # x, y = import_libsvm_sparse(dataset_train).format_sklearn()
         # test_ds = Dataset(x,y)
@@ -363,7 +395,7 @@ class BinaryClassTest(object):
 
 
     #空跑测试集做图像
-    def score_ideal(self, trn_ds,tst_ds,lbr,model,qs,quota):
+    def score_ideal(self, trn_ds, tst_ds, lbr, model, qs, quota):
         E_in, E_out = [], []
 
         for _ in range(quota):
@@ -379,7 +411,7 @@ class BinaryClassTest(object):
 
         return E_in, E_out
 
-    def plotforimage(self, query_num,E_in1,E_in2,E_out1,E_out2,username):
+    def plotforimage(self, query_num, E_in1, E_in2, E_out1, E_out2, username):
         dir = '/app/codalab/static/img/partpicture/'+username+'/'
 
         if os.path.isfile(dir + 'compare.png'):
@@ -429,6 +461,7 @@ class BinaryClassTest(object):
                                                   model=LogisticRegression()
                                                   )
         elif algorithm == 'dal':
+            pass
             #  [todo] add dal
         else:
             pass
@@ -461,6 +494,7 @@ class BinaryClassTest(object):
                                                   model=SVM(kernel='linear', decision_function_shape='ovr')
                                                   )
         elif algorithm == 'dal':
+            pass
             # [todo] add dal
         else:
             pass
@@ -469,9 +503,12 @@ class BinaryClassTest(object):
 
     def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
-        trainentity = '/app/codalab/thirdpart/'+username+'/'+ 'train.txt'
-        unlabelentity = '/app/codalab/thirdpart/'+username+'/'+ 'unlabel.txt'
-        testentity = '/app/codalab/thirdpart/'+username+'/'+ 'test.txt'
+        trainentity = '/app/codalab/thirdpart/'+username+'/' + 'train.txt'
+        unlabelentity = '/app/codalab/thirdpart/'+username+'/' + 'unlabel.txt'
+        testentity = '/app/codalab/thirdpart/'+username+'/' + 'test.txt'
+        vocab_dir = '/app/codalab/thirdpart/'+username+'/vocab/' + 'vocab.txt'
+        vocab_size = 1000
+
         # [Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
         #1是提交的两个文件，一个训练集一个测试集。
         # trainAndtest = 1
@@ -493,17 +530,19 @@ class BinaryClassTest(object):
 
         #提交的是Train还是Train+Test
         if trainAndtest == 1:
-            trn_ds, numoftrain, unlabelnames,real_trn_ds = self.split_train_and_unlabel(trainentity,unlabelentity)
-            tst_ds = self.split_onlytest(testentity)
+            ## train_dir, unlabel_dir, test_dir, vocab_dir, vocab_size
+            trn_ds, numoftrain, unlabelnames, real_trn_ds = self.split_train_and_unlabel(trainentity, unlabelentity, testentity, vocab_dir, vocab_size)
+            tst_ds = self.split_onlytest(testentity, vocab_dir, vocab_size)
             none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
+            pass
             # 提交的只有一个Train
-            X_train, y_train, fully_tst_ds, tst_ds, val_ds = self.split_train_test(trainentity,testsize)
-            trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(X_train, y_train, unlabelentity)
-            real_trn_ds = copy.deepcopy(trn_ds)
-            none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
+            # X_train, y_train, fully_tst_ds, tst_ds, val_ds = self.split_train_test(trainentity, testsize)
+            # trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(X_train, y_train, unlabelentity)
+            # real_trn_ds = copy.deepcopy(trn_ds)
+            # none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
 
         trn_ds_random = copy.deepcopy(none_trn_ds) # 原验证集强行划分部分未知None做效果用
@@ -532,9 +571,9 @@ class BinaryClassTest(object):
                 qs, qs_fordraw = svmClassfiy(algorithm, trn_ds, none_trn_ds)
                 lbr = IdealLabeler(real_trn_ds)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
-                E_in1, E_out1 = self.score_ideal(none_trn_ds,tst_ds,lbr,model,qs_fordraw,quota)
+                E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
-                E_in2, E_out2 = self.score_ideal(trn_ds_random,tst_ds,lbr,model,qs_random,quota)
+                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
             else:
                 pass
         elif strategy == 'multilabel':
@@ -555,7 +594,7 @@ class BinaryClassTest(object):
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
-            max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
+            max_n = heapq.nlargest(quota,range(len(num_score_array)), num_score_array.take)
 
             if len(unlabeldatasetdir) < 1:
                 for ask_id in max_n:
@@ -584,7 +623,7 @@ class BinaryClassTest(object):
                 csvdir = '/app/codalab/static/img/partpicture/'+username+'/dict.csv'
                 with open(csvdir, 'wb') as csv_file:
                     writer = csv.writer(csv_file)
-                    writer.writerow(['name','entity'])
+                    writer.writerow(['name', 'entity'])
                     for key, value in unlabeldict.items():
                         #askidlist.append(key)
                         writer.writerow([key, value])
