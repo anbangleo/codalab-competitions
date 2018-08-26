@@ -12,14 +12,11 @@ label each selected sample through InteractiveLabeler. Then we will compare the
 performance of using UncertaintySampling and RandomSampling under
 LogisticRegression.
 """
-
 import copy
 import os
 import numpy as np
 import matplotlib
-
 import matplotlib.pyplot as plt
-
 import zipfile
 import time
 import random
@@ -29,17 +26,10 @@ import json
 import base64
 import heapq
 matplotlib.use('Agg')
-
-try:
-    from sklearn.model_selection import train_test_split
-except ImportError:
-    from sklearn.cross_validation import train_test_split
-
 # libact classes
 # from makesvm import CreateSVM
 from libact.base.dataset import Dataset
-from libact.models import LogisticRegression,SVM
-from libact.query_strategies import UncertaintySampling, RandomSampling, QueryByCommittee,ActiveLearningByLearning
+from libact.query_strategies import UncertaintySampling, RandomSampling, QueryByCommittee, ActiveLearningByLearning
 from libact.base.dataset import Dataset, import_libsvm_sparse
 from libact.labelers import InteractiveLabeler
 from libact.labelers import IdealLabeler
@@ -53,7 +43,6 @@ except ImportError:
     from sklearn.cross_validation import train_test_split
 
 # libact classes
-from libact.base.dataset import Dataset, import_libsvm_sparse
 from libact.models import *
 from libact.query_strategies import *
 from libact.labelers import IdealLabeler
@@ -64,7 +53,7 @@ from deeplearning.dealwordindict import read_vocab, read_category, batch_iter, p
 import time
 from datetime import timedelta
 import heapq
-from data.rnnmodel import RNN_Probability_Model,TRNNConfig
+from deeplearning.rnnmodel import RNN_Probability_Model, TRNNConfig
 import random
 
 class BinaryClassTest(object):
@@ -433,7 +422,7 @@ class BinaryClassTest(object):
         plt.clf()
         plt.close()
 
-    def LogicRegression(self, algorithm, trn_ds, none_trn_ds):
+    def myRegression(self, algorithm, trn_ds, none_trn_ds):
         if algorithm == 'qbc':
             qs = QueryByCommitteePlus(trn_ds, models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
             qs_fordraw = QueryByCommittee(none_trn_ds,
@@ -551,14 +540,14 @@ class BinaryClassTest(object):
 # ========================Binary====================
         if strategy == 'binary':
             if modelselect == 'logic':
-                qs, qs_fordraw = LogisticRegression(algorithm, trn_ds, none_trn_ds)
+                qs, qs_fordraw = self.myRegression(algorithm, trn_ds, none_trn_ds)
                 model = LogisticRegression()
                 lbr = IdealLabeler(real_trn_ds)
                 E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
                 model = LogisticRegression()
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
             elif modelselect == 'svm':
-                qs, qs_fordraw = svmClassfiy(algorithm, trn_ds, none_trn_ds)
+                qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, none_trn_ds)
                 lbr = IdealLabeler(real_trn_ds)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
                 E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
@@ -568,7 +557,7 @@ class BinaryClassTest(object):
                 pass
         elif strategy == 'multiclass':
             if modelselect == 'svm':
-                qs, qs_fordraw = svmClassfiy(algorithm, trn_ds, none_trn_ds)
+                qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, none_trn_ds)
                 lbr = IdealLabeler(real_trn_ds)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
                 E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
