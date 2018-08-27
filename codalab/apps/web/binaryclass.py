@@ -555,6 +555,7 @@ class BinaryClassTest(object):
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
             else:
                 pass
+
         elif strategy == 'multiclass':
             if modelselect == 'svm':
                 qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, none_trn_ds)
@@ -565,6 +566,7 @@ class BinaryClassTest(object):
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
             else:
                 pass
+
         elif strategy == 'multilabel':
             pass
 
