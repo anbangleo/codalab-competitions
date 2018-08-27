@@ -1,226 +1,258 @@
-﻿{% extends 'base.html' %}
-{% load i18n %}
-{% load staticfiles %}
-{% load codalab_tags %}
-{% load tz %}
-
-{% block page_title %}开发者数据实验站{% endblock page_title %}
-{% block head_title %}开发者数据实验站{% endblock %}
-
-<h2>{{ user.username }}</h2>
-{% block content %}
-
+﻿{% extends 'base.html' %} {% load i18n %} {% load staticfiles %} {% load codalab_tags %} {% load tz %} {% block page_title %}开发者数据实验站{% endblock page_title %} {% block head_title %}开发者数据实验站{% endblock %}
+<h2>{{ user.username }}</h2> {% block content %}
 <script type="text/javascript">
 function checkform() {
     numsnull = $("#idnumneedtobelabeled").val();
     numbers = $("#numofunlabel").val();
     testsize = $("#idtestsize").val();
-
     ifsendtoBMT = $("#radio_senttoBMT").val()
 
-    $("#clearbutton").click(function () {
+    $("#clearbutton").click(function() {
         return true;
     });
 
-    if(testsize==""){
+    if (testsize == "") {
         alert("请输入验证集比例！");
         return false;
-    }
-    else if(testsize>1 || testsize<=0){
+    } else if (testsize > 1 || testsize <= 0) {
         alert("请输入一个0-1之间的验证集比例！建议范围0.20-0.40")
         return false;
     }
-    if (numsnull==""){
+    if (numsnull == "") {
         alert("请输入标注集个数！");
         return false;
-    }
-    else if(parseInt(numsnull)>numbers)
-    {
+    } else if (parseInt(numsnull) > numbers) {
         alert("你输入的标注实例个数大于系统检测到的最大验证集！");
         return false;
     }
     return true;
 }
 </script>
-
 <script>
-    $(document).ready(function() {
+$(document).ready(function() {
 
-        $("#binary").click(function () {
+    $("#binary").click(function() {
+         $("#model_logic").show();
+         $("#model_logic").click(function() {
             $("#algforbinary").show();
+            $("#algfordal").hide();
             $("#algformulticlass").hide();
-
-        });
-        $("#multiclass").click(function () {
-//            alert("hello!");
+            $("#algformultilabel").hide();
+         });
+         $("#model_svm").click(function() {
+            $("#algforbinary").show();
+            $("#algfordal").hide();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
+         $("#model_dal").click(function() {
             $("#algforbinary").hide();
-            $("#algformulticlass").show();
-        });
-        $("#bmtpassword").hide();
-        $("#radio_returnentities").click(function () {
-            $("#bmtpassword").hide()
-        });
-
-        $("#radio_senttoBMT").click(function () {
-            $("#bmtpassword").show()
-        });
-
-
+            $("#algfordal").show();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
+    });
+    $("#multiclass").click(function() {
+         $("#model_logic").hide();
+         $("#model_svm").click(function() {
+            $("#algforbinary").show();
+            $("#algfordal").hide();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
+         $("#model_dal").click(function() {
+            $("#algforbinary").hide();
+            $("#algfordal").show();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
+    });
+    $("#multilabel").click(function() {
+         $("#model_logic").click(function() {
+            $("#algforbinary").show();
+            $("#algfordal").hide();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
+         $("#model_svm").click(function() {
+            $("#algforbinary").show();
+            $("#algfordal").hide();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
+         $("#model_dal").click(function() {
+            $("#algforbinary").hide();
+            $("#algfordal").show();
+            $("#algformulticlass").hide();
+            $("#algformultilabel").hide();
+         });
     });
 
-</script>
+    $("#bmtpassword").hide();
+    $("#radio_returnentities").click(function() {
+        $("#bmtpassword").hide()
+    });
 
+    $("#radio_senttoBMT").click(function() {
+        $("#bmtpassword").show()
+    });
+
+
+});
+</script>
 <div class="row">
     <div class="col-sm-12">
         <table class="table table-striped ">
             <tr>
                 <th align="right">提交文件</th>
-                    <td align="left">
-                        <p>当前最多支持展示最近上传的十个文件</p>
-                        {% if documentss %}
-                        <ul>
-                            {% for document in documentss %}
-                            <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a></li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p>No documents.</p>
-                        {% endif %}
-                        <!-- Upload form. Note enctype attribute! -->
-                            <form action="{% url 'developerlab_upload' %}" name="uploadfile" id= "uploadfile1" method="post" enctype="multipart/form-data" onsubmit="return checkform()">
-                                {% csrf_token %}
-                                <p>{{ form.non_field_errors }}</p>
-                                <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
-                                <p>
-                                    {{ form.docfile.errors }}
-                                    {{ form.docfile }}
-                                </p>
-                                <p><input type="submit" name="uploadfile" value="上传文件"></p>
-                            <p>上传的压缩包文件格式，请参照</p>
-                    </td>
+                <td align="left">
+                    <p>当前最多支持展示最近上传的十个文件</p>
+                    {% if documentss %}
+                    <ul>
+                        {% for document in documentss %}
+                        <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No documents.</p>
+                    {% endif %}
+                    <!-- Upload form. Note enctype attribute! -->
+                    <form action="{% url 'developerlab_upload' %}" name="uploadfile" id="uploadfile1" method="post" enctype="multipart/form-data" onsubmit="return checkform()">
+                        {% csrf_token %}
+                        <p>{{ form.non_field_errors }}</p>
+                        <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
+                        <p>
+                            {{ form.docfile.errors }} {{ form.docfile }}
+                        </p>
+                        <p>
+                            <input type="submit" name="uploadfile" value="上传文件">
+                        </p>
+                        <p>上传的压缩包文件格式，请参照</p>
+                </td>
             </tr>
-
             <tr>
-
                 <th align="right">样本类别</th>
-                <td align="left"><input type="radio" name = "kind" value = "text" checked>文本
-                                    <!--<input type="radio" name = "kind" value = "image" >图片</td>-->
-            </tr>
-            <tr>
-
-                <th align="right">模型选择</th>
-                <td align="left"><input type="radio" name = "model" value = "logic" checked>逻辑回归
-                <input type="radio" name = "model" value = "svm">支持向量机</td>
+                <td align="left">
+                    <input type="radio" name="kind" value="text" checked>文本
+                    <!--<input type="radio" name = "kind" value = "image" >图片</td>-->
             </tr>
             <tr>
                 <th>策略选择</th>
-                <td align="left"><input type="radio" name = "strategy" value = "binary" id="binary" checked>二元分类（Binary-Class）
-                    <input type="radio" name = "strategy" value = "multiclass" id="multiclass">多元分类(Multi-Class)
-                    <input type="radio" name = "strategy" value = "multilabel" id="multilabel">多标签分类(Multi-Label)</td>
-                    <!--<input type="radio" name = "alg" >多标签</td>-->
+                <td align="left">
+                    <input type="radio" name="strategy" value="binary" id="binary" checked>二元分类（Binary-Class）
+                    <input type="radio" name="strategy" value="multiclass" id="multiclass">多元分类(Multi-Class)
+                    <input type="radio" name="strategy" value="multilabel" id="multilabel">多标签分类(Multi-Label)</td>
+                <!--<input type="radio" name = "alg" >多标签</td>-->
+            </tr>
+            <tr>
+                <th align="right">模型选择</th>
+                <td align="left">
+                    <input type="radio"  name="model" id="model_logic" value="logic" checked>逻辑回归
+                    <input type="radio"  name="model" id="model_svm" value="svm">支持向量机
+                    <input type="radio"  name="model" id="model_dal" value="dal">深度主动学习框架
+                </td>
             </tr>
             <tr>
                 <th>算法选择</th>
                 <td align="left">
-                <div id="algforbinary">
-                    <input type="radio" name = "alg" value = "us" checked>不确定采样法(Uncertainty Sampling)
-                    <input type="radio" name = "alg" value = "qbc">委员会问询法(Query By Committee)
-                    <input type="radio" name = "alg" value = "albl" >自动选择最优算法
-                </div>
+                    <div id="algforbinary">
+                        <input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)
+                        <input type="radio" name="alg" value="qbc">委员会问询法(Query By Committee)
+                        <input type="radio" name="alg" value="albl">自动选择最优算法
+                    </div>
+                     <div id="algfordal" style="display: none;">
+                        <input type="radio" name="alg" value="cnn">CNN
+                        <input type="radio" name="alg" value="rnn">RNN
+                    </div>
+                    <div id="algformulticlass" style="display: none;">
+                        <input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)
+                        <input type="radio" name="alg" value="qbc">委员会问询法(Query By Committee)
+                        <input type="radio" name="alg" value="albl">自动选择最优算法
+                    </div>
+                    <div id="algformultilabel" style="display: none;">
+                        <input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)
+                    </div>
 
-                <div id="algformulticlass" style="display: none;">
-                    <input type="radio" name = "alg" value = "us" >不确定采样法(Uncertainty Sampling)
-
-                </div>
                 </td>
             </tr>
-
-                    <!--如果是压缩包-->
-                    {% if ifzip == 1 %}
-                        <!--合理-->
-                        {% if iftrain == 1 and ifunlabel == 1 %}
-                            {% if iftest == 0 %}
-                                 <tr>
-                                     <th>验证集比例</th>
-                                    <td><input type = "text" id="idtestsize" name = "testsize">系统并未检测到验证集，请设置验证集比例。范围0.00-1.00，建议值0.2-0.4</td>
-                                </tr>
-                            {% else %}
-                                <tr>
-                                    <th>验证集比例</th>
-                                    <td>无需设置。系统已检测到你已经上传验证集。</td>
-                                </tr>
-                            {% endif %}
-                                <tr>
-                                    <th>标记实例个数</th>
-                                    <td><input type = "text" id="idnumneedtobelabeled" name = "numneedtobelabeled">1-{{numofunlabel}}个。系统共检测到{{numofunlabel}}未标注实例。</nobr></td>
-                                </tr>
-
-                            <tr>
-                                <th>标注方式</th>
-                                <td align="left">
-                                {% if ifdataset == 1 %}
-                                <input type="radio" name = "markmethod" value = "returnentities"checked id="radio_returnentities">返回需标注的实例名称
-                                    <input type="radio" name = "markmethod" value = "sendtoBMT" id = "radio_senttoBMT">发往交互平台众包标注
-                                {% else %}
-                                <input type="radio" name = "markmethod" value = "returnentities"checked>返回需标注的实例名称
-                                {% endif %}
-                                    <div id="bmtpassword">
-                                    <p>请输入BuaaMT密码<input type="password" name="bmtpassword"></p>
-                                        <p><i>（注:如先前未注册过，该密码即为注册密码）</i></p>
-                                        </div>
-                                <p><input type="submit" id = "uplaodtmethod" name="uploadmethod" value="确认执行"><input type="submit" name="clearall" id="clearbutton" value="清除提交内容"></p>
-                                </td>
-                            </tr>
-
-
-                         <!--如果是压缩包，但缺少文件-->
-                        {% else %}
-                             {% if iftrain == 0 and ifunlabel == 1 %}<p>压缩包中缺少必要的训练集train.txt，请重新上传可用压缩包</p>{% endif %}
-                             {% if iftrain == 1 and ifunlabel == 0 %}<p>压缩包中缺少必要的未标注实例集合unlabel.txt，请重新上传可用压缩包</p>{% endif %}
-                             {% if iftrain == 0 and ifunlabel == 0 %}<p>压缩包中缺少必要的训练集train.txt和未标注实例集合unlabel.txt，请参考格式后重新上传可用压缩包</p>{% endif %}{% endif %}
-                                    <!--如果未上传压缩包-->
-                    {% elif ifzip == 0 %}
-                                    <p> 请先上传符合格式的压缩包.zip文件 </p>
-                                    <!--如果上传的不是压缩包-->
-                    {% else %}
-                                    <p> 【错误！】你上传的不是压缩包.zip文件。上传的压缩包文件格式，请参照 </p>
-                    {% endif %}
-            </form>
+            <!--如果是压缩包-->
             {% if ifzip == 1 %}
-            {% if di %}
+            <!--合理-->
+            {% if iftrain == 1 and ifunlabel == 1 %} {% if iftest == 0 %}
+            <tr>
+                <th>验证集比例</th>
+                <td>
+                    <input type="text" id="idtestsize" name="testsize">系统并未检测到验证集，请设置验证集比例。范围0.00-1.00，建议值0.2-0.4</td>
+            </tr>
+            {% else %}
+            <tr>
+                <th>验证集比例</th>
+                <td>无需设置。系统已检测到你已经上传验证集。</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>标记实例个数</th>
+                <td>
+                    <input type="text" id="idnumneedtobelabeled" name="numneedtobelabeled">1-{{numofunlabel}}个。系统共检测到{{numofunlabel}}未标注实例。</nobr>
+                </td>
+            </tr>
+            <tr>
+                <th>标注方式</th>
+                <td align="left">
+                    {% if ifdataset == 1 %}
+                    <input type="radio" name="markmethod" value="returnentities" checked id="radio_returnentities">返回需标注的实例名称
+                    <input type="radio" name="markmethod" value="sendtoBMT" id="radio_senttoBMT">发往交互平台众包标注 {% else %}
+                    <input type="radio" name="markmethod" value="returnentities" checked>返回需标注的实例名称 {% endif %}
+                    <div id="bmtpassword">
+                        <p>请输入BuaaMT密码
+                            <input type="password" name="bmtpassword">
+                        </p>
+                        <p><i>（注:如先前未注册过，该密码即为注册密码）</i></p>
+                    </div>
+                    <p>
+                        <input type="submit" id="uplaodtmethod" name="uploadmethod" value="确认执行">
+                        <input type="submit" name="clearall" id="clearbutton" value="清除提交内容">
+                    </p>
+                </td>
+            </tr>
+            <!--如果是压缩包，但缺少文件-->
+            {% else %} {% if iftrain == 0 and ifunlabel == 1 %}
+            <p>压缩包中缺少必要的训练集train.txt，请重新上传可用压缩包</p>{% endif %} {% if iftrain == 1 and ifunlabel == 0 %}
+            <p>压缩包中缺少必要的未标注实例集合unlabel.txt，请重新上传可用压缩包</p>{% endif %} {% if iftrain == 0 and ifunlabel == 0 %}
+            <p>压缩包中缺少必要的训练集train.txt和未标注实例集合unlabel.txt，请参考格式后重新上传可用压缩包</p>{% endif %}{% endif %}
+            <!--如果未上传压缩包-->
+            {% elif ifzip == 0 %}
+            <p> 请先上传符合格式的压缩包.zip文件 </p>
+            <!--如果上传的不是压缩包-->
+            {% else %}
+            <p> 【错误！】你上传的不是压缩包.zip文件。上传的压缩包文件格式，请参照 </p>
+            {% endif %}
+            </form>
+            {% if ifzip == 1 %} {% if di %}
             <tr>
                 <th>效果预览</th>
                 <td>
-                    <img src = "{{picture_url}}">
+                    <img src="{{picture_url}}">
                 </td>
             </tr>
             {% endif %}
-
             <tr>
                 <th>执行结果</th>
                 <td>
-
-
                     {% if di %}
                     <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
                     <ul>
-
-                        {% if ifsendtoBMT %}
-                            {% if rec_status == -1 %}
-                                <script type="text/javascript">
-                                     alert("链接标注平台超时！");
-                                </script>
-                            {% elif rec_status == 1 %}
-                            <p>恭喜，已发送到标注平台，<a href="http://{{rec_url}}">点击链接直接跳转完成任务发布</a></p>
-                            {% else %}
-                                <script type="text/javascript">
-
-                                    alert("链接标注平台失败！");
-
-                                </script>
-                            {% endif %}
-
-                        {% endif %}
+                        {% if ifsendtoBMT %} {% if rec_status == -1 %}
+                        <script type="text/javascript">
+                        alert("链接标注平台超时！");
+                        </script>
+                        {% elif rec_status == 1 %}
+                        <p>恭喜，已发送到标注平台，<a href="http://{{rec_url}}">点击链接直接跳转完成任务发布</a></p>
+                        {% else %}
+                        <script type="text/javascript">
+                        alert("链接标注平台失败！");
+                        </script>
+                        {% endif %} {% endif %}
                         <!--{% for d in di %}-->
                         <!--<li>{{d}}</li>-->
                         <!--{% endfor %}-->
@@ -230,11 +262,9 @@ function checkform() {
                     {% endif %}
                 </td>
             </tr>
-
             {% endif %}
             </tbody>
         </table>
     </div>
 </div>
-
 {% endblock %}
