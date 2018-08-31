@@ -32,20 +32,21 @@ function checkform() {
 $(document).ready(function() {
 
     $("#binary").click(function() {
-         $("#model_logic").show();
-         $("#model_logic").click(function() {
+         // $("#model_logic").show();
+
+         $("#model_logic").show().click(function() {
             $("#algforbinary").show();
             $("#algfordal").hide();
             $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
-         $("#model_svm").click(function() {
+         $("#model_svm").show().click(function() {
             $("#algforbinary").show();
             $("#algfordal").hide();
             $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
-         $("#model_dal").click(function() {
+         $("#model_dal").show().click(function() {
             $("#algforbinary").hide();
             $("#algfordal").show();
             $("#algformulticlass").hide();
@@ -54,13 +55,13 @@ $(document).ready(function() {
     });
     $("#multiclass").click(function() {
          $("#model_logic").hide();
-         $("#model_svm").click(function() {
+         $("#model_svm").show().click(function() {
             $("#algforbinary").show();
             $("#algfordal").hide();
             $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
-         $("#model_dal").click(function() {
+         $("#model_dal").show().click(function() {
             $("#algforbinary").hide();
             $("#algfordal").show();
             $("#algformulticlass").hide();
@@ -68,23 +69,13 @@ $(document).ready(function() {
          });
     });
     $("#multilabel").click(function() {
-         $("#model_logic").click(function() {
-            $("#algforbinary").show();
-            $("#algfordal").hide();
-            $("#algformulticlass").hide();
-            $("#algformultilabel").hide();
-         });
+         $("#model_logic").hide();
+         $("#model_dal").hide();
          $("#model_svm").click(function() {
-            $("#algforbinary").show();
+            $("#algforbinary").hide();
             $("#algfordal").hide();
             $("#algformulticlass").hide();
-            $("#algformultilabel").hide();
-         });
-         $("#model_dal").click(function() {
-            $("#algforbinary").hide();
-            $("#algfordal").show();
-            $("#algformulticlass").hide();
-            $("#algformultilabel").hide();
+            $("#algformultilabel").show();
          });
     });
 
@@ -139,7 +130,7 @@ $(document).ready(function() {
             <tr>
                 <th>策略选择</th>
                 <td align="left">
-                    <input type="radio" name="strategy" value="binary" id="binary" checked>二元分类（Binary-Class）
+                    <input type="radio" name="strategy" value="binary" id="binary">二元分类（Binary-Class）
                     <input type="radio" name="strategy" value="multiclass" id="multiclass">多元分类(Multi-Class)
                     <input type="radio" name="strategy" value="multilabel" id="multilabel">多标签分类(Multi-Label)</td>
                 <!--<input type="radio" name = "alg" >多标签</td>-->
@@ -147,9 +138,9 @@ $(document).ready(function() {
             <tr>
                 <th align="right">模型选择</th>
                 <td align="left">
-                    <input type="radio"  name="model" id="model_logic" value="logic" checked>逻辑回归
-                    <input type="radio"  name="model" id="model_svm" value="svm">支持向量机
-                    <input type="radio"  name="model" id="model_dal" value="dal">深度主动学习框架
+                    <div id="model_logic"><input type="radio"  name="model"  value="logic">逻辑回归</div>
+                    <div id="model_svm"><input type="radio"  name="model"  value="svm">支持向量机</div>
+                    <div id="model_dal"><input type="radio"  name="model"  value="dal">深度主动学习框架</div>
                 </td>
             </tr>
             <tr>
@@ -180,14 +171,14 @@ $(document).ready(function() {
             <!--合理-->
             {% if iftrain == 1 and ifunlabel == 1 %} {% if iftest == 0 %}
             <tr>
-                <th>验证集比例</th>
-                <td>
-                    <input type="text" id="idtestsize" name="testsize">系统并未检测到验证集，请设置验证集比例。范围0.00-1.00，建议值0.2-0.4</td>
+                <th>验证集检测</th>
+                <td>抱歉！您未上传验证集，请重新上传。</td>
+                    <!--<input type="text" id="idtestsize" name="testsize">系统并未检测到验证集，请设置验证集比例。范围0.00-1.00，建议值0.2-0.4</td>-->
             </tr>
             {% else %}
             <tr>
-                <th>验证集比例</th>
-                <td>无需设置。系统已检测到你已经上传验证集。</td>
+                <th>验证集检测</th>
+                <td>恭喜！系统已检测到你已经上传验证集。</td>
             </tr>
             {% endif %}
             <tr>
