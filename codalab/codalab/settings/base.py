@@ -165,7 +165,7 @@ class Base(Settings):
     )
 
     MIDDLEWARE_CLASSES = (
-        'django_switchuser.middleware.SuStateMiddleware',
+        #'django_switchuser.middleware.SuStateMiddleware',
         'apps.web.middleware.SingleCompetitionMiddleware',
         'django.middleware.common.CommonMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
@@ -189,7 +189,7 @@ class Base(Settings):
     )
 
     TEMPLATE_CONTEXT_PROCESSORS = Settings.TEMPLATE_CONTEXT_PROCESSORS + (
-        "django_switchuser.context_processors.su_state",
+        #"django_switchuser.context_processors.su_state",
         "allauth.account.context_processors.account",
         "allauth.socialaccount.context_processors.socialaccount",
         "codalab.context_processors.app_version_proc",
@@ -268,7 +268,7 @@ class Base(Settings):
         'django_extensions',
 
         # Switch User
-        "django_switchuser",
+       # "django_switchuser",
 
         # Lockout
         'pin_passcode',

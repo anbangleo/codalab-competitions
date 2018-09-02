@@ -12,6 +12,8 @@ label each selected sample through InteractiveLabeler. Then we will compare the
 performance of using UncertaintySampling and RandomSampling under
 LogisticRegression.
 """
+import sys
+sys.path.append('/app/codalab/apps/web/deeplearning')
 import copy
 import os
 import numpy as np
@@ -49,12 +51,13 @@ from libact.labelers import IdealLabeler
 import tensorflow.contrib.keras as kr
 # from cp-cnews_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
 
-from deeplearning.dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab
+from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab
 import time
 from datetime import timedelta
 import heapq
-from deeplearning.rnnmodel import RNN_Probability_Model, TRNNConfig
+from rnnmodel import RNN_Probability_Model, TRNNConfig
 import random
+
 
 class BinaryClassTest(object):
     def __init__(self):
