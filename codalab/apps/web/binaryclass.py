@@ -281,12 +281,12 @@ class BinaryClassTest(object):
         #返回训练集，训练集的个数，未标记数据的名称list
         return trn_ds, numoftrain, unlabel_name
 
-    def sendfile(self, filedir,filetype,username,useremail,password,numneedtobemarked):
+    def sendfile(self, filedir, filetype, username, useremail, password, numneedtobemarked):
         SIZE = 65535
         RECSIZE = 1024
         jsontosend = {}
         id = time.strftime("%Y", time.localtime())+time.strftime("%m", time.localtime())+time.strftime("%d", time.localtime())+time.strftime("%H", time.localtime())+time.strftime("%M", time.localtime())+time.strftime("%S", time.localtime())
-        id = id + str(random.randint(0,9))+str(random.randint(0,9))+str(random.randint(0,9))+str(random.randint(0,9))+str(random.randint(0,9))
+        id = id + str(random.randint(0, 9))+str(random.randint(0, 9))+str(random.randint(0, 9))+str(random.randint(0, 9))+str(random.randint(0, 9))
         jsontosend['id'] = long(id)
         jsontosend['username'] = username
         jsontosend['email'] = useremail
@@ -495,10 +495,13 @@ class BinaryClassTest(object):
 
     def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
-        trainentity = '/app/codalab/thirdpart/'+username+'/' + 'train.txt'
-        unlabelentity = '/app/codalab/thirdpart/'+username+'/' + 'unlabel.txt'
-        testentity = '/app/codalab/thirdpart/'+username+'/' + 'test.txt'
-        vocab_dir = '/app/codalab/thirdpart/'+username+'/vocab/' + 'vocab.txt'
+        trainentity = '/app/codalab/thirdpart/' + username + '/train.txt'
+        unlabelentity = '/app/codalab/thirdpart/' + username + '/unlabel.txt'
+        testentity = '/app/codalab/thirdpart/' + username + '/test.txt'
+        vocab_dir = '/app/codalab/thirdpart/' + username + '/vocab/vocab.txt'
+
+        # 提交未标记集的两种模式，一种有unlabel文件夹，一种有unlabel文件
+        unlabeldatasetdir = '/app/codalab/thirdpart/' + username + '/unlabel/'
         vocab_size = 1000
 
         # [Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
@@ -513,9 +516,10 @@ class BinaryClassTest(object):
 
         # Todo:ask_id是问的train+unlabel中unlabel的id
 
-        unlabeldatasetdir = '/app/codalab/thirdpart/'+username+'/unlabel'
+
 
         unlabeldatasetdir = os.listdir(unlabeldatasetdir)
+
         E_in1, E_in2 = [], []
         E_out1, E_out2 = [], []
         unlabeldict = {}
@@ -588,7 +592,7 @@ class BinaryClassTest(object):
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
-            max_n = heapq.nlargest(quota,range(len(num_score_array)), num_score_array.take)
+            max_n = heapq.nlargest(quota, range(len(num_score_array)), num_score_array.take)
 
             if len(unlabeldatasetdir) < 1:
                 for ask_id in max_n:
@@ -602,7 +606,7 @@ class BinaryClassTest(object):
                     for unlabelname in askidlist:
                         writer.writerow([unlabelname])
 
-                return askidlist,csvdir
+                return askidlist, csvdir
             else:
                 for ask_id in max_n:
                     filename = unlabelnames[ask_id]
@@ -629,7 +633,7 @@ class BinaryClassTest(object):
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
-            max_n = heapq.nlargest(quota,range(len(num_score_array)),num_score_array.take)
+            max_n = heapq.nlargest(quota, range(len(num_score_array)),num_score_array.take)
             for ask_id in max_n:
                 filename = unlabelnames[ask_id]
                 if filename.split('/')[-1] in unlabeldatasetdir:

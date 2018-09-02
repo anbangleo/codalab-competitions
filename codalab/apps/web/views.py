@@ -2077,40 +2077,44 @@ def developerlab(request):
         clear = request.POST.get('clearall',None)
         if clear:
             di = {}
-            iftrain=0
-            iftest=0
-            ifunlabel=0
-            ifdataset=0
-            numofdataset=0
-            numofunlabel=0
+            iftrain = 0
+            iftest = 0
+            ifunlabel = 0
+            ifdataset = 0
+            numofdataset = 0
+            numofunlabel = 0
             ifzip = 0 # 0 is none, 1 is valid, 2 is wrong
-            return HttpResponseRedirect(reverse('developerlab_upload'),{'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
+            return HttpResponseRedirect(reverse('developerlab_upload'), {'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel})
 #
         if submit:
-            di={}
+            di = {}
             form = DocumentForm(request.POST, request.FILES)
             if form.is_valid():
+
+                userpath = '/app/codalab/thirdpart/'+str(request.user) +'/'
+                if not os.path.exists(userpath):
+                    os.mkdir(userpath)
+
                 docfile = request.FILES['docfile']
                 with open('/app/codalab/thirdpart/'+str(request.user)+'/docfile.zip', 'wb+') as destination:
                     for chunk in docfile.chunks():
                         destination.write(chunk)
 
                 if docfile.name.split('/')[-1].split('.')[-1]=='zip':
-                    iftrain=0
-                    iftest=0
-                    ifunlabel=0
-                    ifdataset=0
-                    numofdataset=0
-                    numofunlabel=0
+                    iftrain = 0
+                    iftest = 0
+                    ifunlabel = 0
+                    ifdataset = 0
+                    numofdataset = 0
+                    numofunlabel = 0
 
                     ifzip = 1 # 0 is none, 1 is valid, 2 is wrong
                     ziplist = zipfile.ZipFile(docfile)
 
-
                     unlabeldataset = list(filter(lambda x: '/' in x , ziplist.namelist()))#
                     numofdataset = len(unlabeldataset)
 
-                    expunlabeldataset = list(filter(lambda x: '/' not in x , ziplist.namelist()))
+                    expunlabeldataset = list(filter(lambda x: '/' not in x, ziplist.namelist()))
 
                     if numofdataset>0:
                         ifdataset = 1
@@ -2173,7 +2177,6 @@ def developerlab(request):
                     ifsendtoBMT = 0
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize,markmethod
-
                     di, csvdir = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
 
                     picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
@@ -2190,9 +2193,9 @@ def developerlab(request):
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url,'picture_url':picture_url})
             else:
 
-                return HttpResponseRedirect(reverse('developerlab_upload'),{'docfilecopy':docfilecopy})
+                return HttpResponseRedirect(reverse('developerlab_upload'), {'docfilecopy':docfilecopy})
 
-            return HttpResponseRedirect(reverse('developerlab_upload'),{'docfilecopy':docfilecopy})
+            return HttpResponseRedirect(reverse('developerlab_upload'), {'docfilecopy':docfilecopy})
 
 
     else:

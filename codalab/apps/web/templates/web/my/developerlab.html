@@ -32,49 +32,41 @@ function checkform() {
 $(document).ready(function() {
 
     $("#binary").click(function() {
-         // $("#model_logic").show();
-
-         $("#model_logic").show().click(function() {
+         $("#mlogic").show().click(function() {
             $("#algforbinary").show();
             $("#algfordal").hide();
-            $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
-         $("#model_svm").show().click(function() {
+         $("#msvm").show().click(function() {
             $("#algforbinary").show();
             $("#algfordal").hide();
-            $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
-         $("#model_dal").show().click(function() {
+         $("#mdal").show().click(function() {
             $("#algforbinary").hide();
             $("#algfordal").show();
-            $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
     });
     $("#multiclass").click(function() {
-         $("#model_logic").hide();
-         $("#model_svm").show().click(function() {
+         $("#mlogic").hide();
+         $("#msvm").show().click(function() {
             $("#algforbinary").show();
             $("#algfordal").hide();
-            $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
-         $("#model_dal").show().click(function() {
+         $("#mdal").show().click(function() {
             $("#algforbinary").hide();
             $("#algfordal").show();
-            $("#algformulticlass").hide();
             $("#algformultilabel").hide();
          });
     });
     $("#multilabel").click(function() {
-         $("#model_logic").hide();
-         $("#model_dal").hide();
-         $("#model_svm").click(function() {
+         $("#mlogic").hide();
+         $("#mdal").hide();
+         $("#msvm").click(function() {
             $("#algforbinary").hide();
             $("#algfordal").hide();
-            $("#algformulticlass").hide();
             $("#algformultilabel").show();
          });
     });
@@ -130,38 +122,38 @@ $(document).ready(function() {
             <tr>
                 <th>策略选择</th>
                 <td align="left">
-                    <input type="radio" name="strategy" value="binary" id="binary">二元分类（Binary-Class）
-                    <input type="radio" name="strategy" value="multiclass" id="multiclass">多元分类(Multi-Class)
-                    <input type="radio" name="strategy" value="multilabel" id="multilabel">多标签分类(Multi-Label)</td>
+                    <input type="radio" name="strategy" value="binary" id="binary"><label for="binary">二元分类（Binary-Class）</label>
+                    <input type="radio" name="strategy" value="multiclass" id="multiclass"><label for="multiclass">多元分类(Multi-Class)</label>
+                    <input type="radio" name="strategy" value="multilabel" id="multilabel"><label for="multilabel">多标签分类(Multi-Label)</label></td>
                 <!--<input type="radio" name = "alg" >多标签</td>-->
             </tr>
             <tr>
                 <th align="right">模型选择</th>
                 <td align="left">
-                    <div id="model_logic"><input type="radio"  name="model"  value="logic">逻辑回归</div>
-                    <div id="model_svm"><input type="radio"  name="model"  value="svm">支持向量机</div>
-                    <div id="model_dal"><input type="radio"  name="model"  value="dal">深度主动学习框架</div>
+                    <span id="mlogic"><input type="radio"  name="model" id="model_logic" value="logic"><label for="model_logic">逻辑回归</label></span>
+                    <span id="msvm"><input type="radio"  name="model" id="model_svm" value="svm"><label for="model_svm">支持向量机</label></span>
+                    <span id="mdal"><input type="radio"  name="model" id="model_dal" value="dal"><label for="model_dal">深度主动学习框架</label></span>
                 </td>
             </tr>
             <tr>
                 <th>算法选择</th>
                 <td align="left">
                     <div id="algforbinary">
-                        <input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)
-                        <input type="radio" name="alg" value="qbc">委员会问询法(Query By Committee)
-                        <input type="radio" name="alg" value="albl">自动选择最优算法
+                        <input type="radio" name="alg" id="alg_us_binary" value="us" checked><label for="alg_us_binary">不确定采样法(Uncertainty Sampling)</label>
+                        <input type="radio" name="alg" id="alg_qbc_binary" value="qbc"><label for="alg_qbc_binary">委员会问询法(Query By Committee)</label>
+                        <input type="radio" name="alg" id="alg_albl_binary" value="albl"><label for="alg_albl_binary">自动选择最优算法</label>
                     </div>
                      <div id="algfordal" style="display: none;">
-                        <input type="radio" name="alg" value="cnn">CNN
-                        <input type="radio" name="alg" value="rnn">RNN
+                        <input type="radio" name="alg" id="alg_cnn_dal" value="cnn"><label for="alg_cnn_dal">CNN</label>
+                        <input type="radio" name="alg" id="alg_rnn_dal" value="rnn"><label for="alg_rnn_dal">RNN</label>
                     </div>
-                    <div id="algformulticlass" style="display: none;">
-                        <input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)
-                        <input type="radio" name="alg" value="qbc">委员会问询法(Query By Committee)
-                        <input type="radio" name="alg" value="albl">自动选择最优算法
-                    </div>
+                    <!--<div id="algformulticlass" style="display: none;">-->
+                        <!--<input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)-->
+                        <!--<input type="radio" name="alg" value="qbc">委员会问询法(Query By Committee)-->
+                        <!--<input type="radio" name="alg" value="albl">自动选择最优算法-->
+                    <!--</div>-->
                     <div id="algformultilabel" style="display: none;">
-                        <input type="radio" name="alg" value="us" checked>不确定采样法(Uncertainty Sampling)
+                        <input type="radio" name="alg" id="alg_us_label" value="us" checked><label for="alg_us_label">不确定采样法(Uncertainty Sampling)</label>
                     </div>
 
                 </td>
