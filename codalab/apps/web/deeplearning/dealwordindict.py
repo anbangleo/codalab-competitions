@@ -107,14 +107,19 @@ def read_vocab(vocab_dir):
     return words, word_to_id
 
 
-def read_category(categories):
+def read_category(filename):
     """读取分类目录，固定"""
-    categories = categories
-
+    categories = []
+    with open_file(filename) as f:
+        for line in f:
+            try:
+                label, content = line.strip().split('\t')
+                if label not in categories:
+                    categories.append(label)
+            except:
+                pass
     categories = [native_content(x) for x in categories]
-
     cat_to_id = dict(zip(categories, range(len(categories))))
-
     return categories, cat_to_id
 
 
@@ -164,8 +169,6 @@ def to_words(content, words):
 #     return x_pad, y_pad
 
 
-
-
 def process_file(filename, word_to_id, cat_to_id, max_length=600):
     """将文件转换为id表示"""
     print ("Start to deal with file...")
@@ -183,11 +186,8 @@ def process_file(filename, word_to_id, cat_to_id, max_length=600):
 
     x_pad = []
     res = []
-    # two = []
     for i in data_id:
-    #     ll=len(i)
-    #     rank = 0
-    #     q = 0
+
         for j in range(600):
     #        # a = format(float(i.count(j))/float(ll),'.6f')
             a = i.count(j)
@@ -198,30 +198,35 @@ def process_file(filename, word_to_id, cat_to_id, max_length=600):
         x_pad.append(res)
         res=[]
 
-   # x_pad = kr.preprocessing.sequence.pad_sequences(data_id, max_length)
     x_pad = np.array(x_pad)
-    #均一化
-    #x_pad = preprocessing.scale(x_pad)
-
-    # 使用keras提供的pad_sequences来将文本pad为固定长度
-   # x_pad = kr.preprocessing.sequence.pad_sequences(data_id, max_length)
     y_pad = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))  # 将标签转换为one-hot表示
     print ("Finish dealing with files!")
-    return x_pad, y_pad
 
-def process_file_rnn(filename, word_to_id, cat_to_id, max_length=600):
+    if unlabelflag == 1:
+        return x_pad, y_pad, labels
+    else:
+        return x_pad, y_pad
+
+# labels 是所有Label 的list
+def process_file_rnn(filename, word_to_id, cat_to_id, unlabelflag, max_length=600):
     """将文件转换为id表示"""
     print ("Start to deal with file...")
     contents, labels = read_file(filename)
     data_id, label_id = [], []
     for i in range(len(contents)):
         data_id.append([word_to_id[x] for x in contents[i] if x in word_to_id])##把contents中的每一个词用word_to_id中id表示
-        label_id.append(cat_to_id[labels[i]])
+        if unlabelflag == 1: # 对Unlabel处理
+            label_id.append(-1)
+        else:
+            label_id.append(cat_to_id[labels[i]])
 
     # x_pad = kr.preprocessing.sequence.pad_sequences(data_id, max_length)
     # y_pad = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))  # 将标签转换为one-hot表示
     print ("Finish dealing with files!")
-    return data_id, label_id
+    if unlabelflag == 1:
+        return data_id, label_id, labels
+    else:
+        return data_id, label_id
 
 def batch_iter(x, y, batch_size=64):
     """生成批次数据"""
