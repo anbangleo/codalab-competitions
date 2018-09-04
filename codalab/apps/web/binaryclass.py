@@ -51,7 +51,7 @@ from libact.labelers import IdealLabeler
 import tensorflow.contrib.keras as kr
 # from cp-cnews_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
 
-from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab
+from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab, native_content
 import time
 from datetime import timedelta
 import heapq
@@ -195,8 +195,9 @@ class BinaryClassTest(object):
             Y_unlabel = np.array(label_id_unlabel)
 
             trn_ds = Dataset(np.concatenate(X_train, X_unlabel), np.concatenate(Y_train, [None] * len(Y_unlabel)))
-            val_ds = Dataset(X_val, Y_val)
             tst_ds = Dataset(X_test, Y_test)
+
+            #[todo]将X_train和X_test组合，随机划分部分测试集，做空跑画图像显示效果用
 
             draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
                               np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
@@ -349,6 +350,31 @@ class BinaryClassTest(object):
 
         return newpassword
 
+    # get the min nums of labeled initially
+    def getlabelnum(self, trn_ds):
+        notolabel = [] # 记录需要标注的序号，将其余的元素置为None
+        initlabel = []
+        initcontents = []
+        maxinitnum = 2 # 每个class允许的最大初始标记个数
+
+        contents, labels = read_file(trn_ds)
+        distinctlabel = list(set(labels))
+        for i in distinctlabel:
+            for j in labels:
+                if j == i:
+                    contents.pop(labels.index(j))
+                    labels.pop(j)
+                    initcontents.append(labels.index(j))
+                    initlabel.append(j)
+                    maxinitnum = maxinitnum - 1
+                    if maxinitnum == 0:
+                        maxinitnum = 2
+                        break
+                    else:
+                        pass
+        initdataset = Dataset(np.concatenate(initcontents, contents), np.concatenate(initlabel, len(initcontents)*[None]))
+
+        return initdataset, len(initlabel), len(labels)
 
     def split_for_drawplot(self, trn_ds, numoftrain, quota):
         #n_labeled = numoftrain - quota
@@ -412,7 +438,6 @@ class BinaryClassTest(object):
 
     def plotforimage(self, query_num, E_in1, E_in2, E_out1, E_out2, username):
         dir = '/app/codalab/static/img/partpicture/'+username+'/'
-
         if os.path.isfile(dir + 'compare.png'):
             os.remove(dir + 'compare.png')
         plt.plot(query_num, E_in1, 'b', label='qs Ein')
@@ -534,9 +559,7 @@ class BinaryClassTest(object):
         #提交的是Train还是Train+Test
         if trainAndtest == 1:
             trn_ds, val_ds, tst_ds, draw_ds, unlabelnames = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
-            # tst_ds = self.split_onlytest(testentity, vocab_dir, vocab_size)
-            none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
-
+            trn_ds_for_draw, initlabelednumbers, quota = self.getlabelnum(draw_ds)
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
             pass
@@ -547,7 +570,7 @@ class BinaryClassTest(object):
             # none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
 
-        trn_ds_random = copy.deepcopy(none_trn_ds) # 原验证集强行划分部分未知None做效果用
+        trn_ds_random = copy.deepcopy(trn_ds_for_draw) # 原验证集强行划分部分未知None做效果用
         qs_random = RandomSampling(trn_ds_random)
 
 # ========================Binary====================
