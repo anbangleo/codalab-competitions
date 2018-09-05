@@ -197,11 +197,14 @@ class BinaryClassTest(object):
             trn_ds = Dataset(np.concatenate(X_train, X_unlabel), np.concatenate(Y_train, [None] * len(Y_unlabel)))
             tst_ds = Dataset(X_test, Y_test)
 
-            #[todo]将X_train和X_test组合，随机划分部分测试集，做空跑画图像显示效果用
+            X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(np.concatenate(X_train, X_test), np.concatenate(Y_train, Y_test), test_size = 0.2)
+            trn_ds_fordraw = Dataset(X_train_fordraw, Y_train_fordraw)
+            tst_ds_fordraw = Dataset(X_test_fordraw, Y_test_fordraw)
 
-            draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
-                              np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
-            return trn_ds, val_ds, tst_ds, draw_ds, unlabelnames
+
+            # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
+            #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
+            return trn_ds, val_ds, tst_ds, unlabelnames, trn_ds_fordraw, tst_ds_fordraw
 
     def split_onlytest(self, test_dir, vocab_dir, wordslength):
         #返回测试集样例
@@ -558,8 +561,8 @@ class BinaryClassTest(object):
 
         #提交的是Train还是Train+Test
         if trainAndtest == 1:
-            trn_ds, val_ds, tst_ds, draw_ds, unlabelnames = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
-            trn_ds_for_draw, initlabelednumbers, quota = self.getlabelnum(draw_ds)
+            trn_ds, val_ds, tst_ds, unlabelnames, trn_ds_fordraw_fully, tst_ds_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
+            trn_ds_fordraw, initlabelednumbers, quota = self.getlabelnum(trn_ds_fordraw)
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
             pass
@@ -570,35 +573,30 @@ class BinaryClassTest(object):
             # none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
 
-        trn_ds_random = copy.deepcopy(trn_ds_for_draw) # 原验证集强行划分部分未知None做效果用
+        trn_ds_random = copy.deepcopy(trn_ds_fordraw) # 原验证集强行划分部分未知None做效果用
         qs_random = RandomSampling(trn_ds_random)
+        lbr = IdealLabeler(trn_ds_fordraw_fully)
 
 # ========================Binary====================
         if strategy == 'binary':
             if modelselect == 'logic':
-                qs, qs_fordraw = self.myRegression(algorithm, trn_ds, none_trn_ds)
+                qs, qs_fordraw = self.myRegression(algorithm, trn_ds, trn_ds_fordraw)
                 model = LogisticRegression()
-                lbr = IdealLabeler(real_trn_ds)
-                E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
-                model = LogisticRegression()
-                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
+                E_in1, E_out1 = self.score_ideal(trn_ds_fordraw, tst_ds_fordraw, lbr, model, qs_fordraw, quota)
+                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota)
             elif modelselect == 'svm':
-                qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, none_trn_ds)
-                lbr = IdealLabeler(real_trn_ds)
+                qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, trn_ds_fordraw)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
-                E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
-                model = SVM(kernel='linear', decision_function_shape='ovr')
-                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
+                E_in1, E_out1 = self.score_ideal(trn_ds_fordraw, tst_ds_fordraw, lbr, model, qs_fordraw, quota)
+                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota)
             else:
                 pass
 
         elif strategy == 'multiclass':
             if modelselect == 'svm':
                 qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, none_trn_ds)
-                lbr = IdealLabeler(real_trn_ds)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
                 E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
-                model = SVM(kernel='linear', decision_function_shape='ovr')
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
             else:
                 pass
@@ -609,15 +607,12 @@ class BinaryClassTest(object):
         else:
             pass
 
-
-
         self.plotforimage(np.arange(1, quota + 1), E_in1, E_in2, E_out1, E_out2, username)
 
+# dir = '/app/codalab/static/img/partpicture/'+username+'/'
 
-#dir = '/app/codalab/static/img/partpicture/'+username+'/'
-        #返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
+        # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
-
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
             num_score_array = np.array(num_score)
@@ -656,8 +651,7 @@ class BinaryClassTest(object):
                         writer.writerow([key, value])
                 return askidlist,csvdir
 
-
-        #向标注平台发送
+        # 向标注平台发送 [TODO]需要和标注平台融合
         else:
             first, scores = qs.make_query(return_score = True)
             number, num_score = zip(*scores)[0], zip(*scores)[1]
