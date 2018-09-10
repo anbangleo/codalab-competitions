@@ -77,7 +77,7 @@ def build_vocab(train_dir, vocab_dir, vocab_size=1000, *args):
         for content in unlabel_data_train:
             all_data.extend(content)
     # 提交的是未标记集 + 测试集
-    elif len(none_dataset) == 2:
+    elif len(args) == 2:
         none_dataset = args[0]
         test_dataset = args[1]
         unlabel_data_train, unlabel_cat = read_file(none_dataset)
@@ -106,7 +106,7 @@ def read_vocab(vocab_dir):
     word_to_id = dict(zip(words, range(len(words))))
     return words, word_to_id
 
-
+# 读train_dir以获取输入文件中所有的样本类别
 def read_category(filename):
     """读取分类目录，固定"""
     categories = []
@@ -169,7 +169,7 @@ def to_words(content, words):
 #     return x_pad, y_pad
 
 
-def process_file(filename, word_to_id, cat_to_id, max_length=600):
+def process_file(filename, word_to_id, cat_to_id, unlabelflag, max_length=600):
     """将文件转换为id表示"""
     print ("Start to deal with file...")
     contents, labels = read_file(filename)
@@ -188,7 +188,7 @@ def process_file(filename, word_to_id, cat_to_id, max_length=600):
     res = []
     for i in data_id:
 
-        for j in range(600):
+        for j in range(max_length):
     #        # a = format(float(i.count(j))/float(ll),'.6f')
             a = i.count(j)
             if a > 0:
@@ -198,16 +198,16 @@ def process_file(filename, word_to_id, cat_to_id, max_length=600):
         x_pad.append(res)
         res=[]
 
-    x_pad = np.array(x_pad)
-    y_pad = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))  # 将标签转换为one-hot表示
+  #  x_pad = np.array(x_pad)
+  #  y_pad = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))  # 将标签转换为one-hot表示
     print ("Finish dealing with files!")
 
     if unlabelflag == 1:
-        return x_pad, y_pad, labels
+        return x_pad, label_id, labels
     else:
-        return x_pad, y_pad
+        return x_pad, label_id
 
-# labels 是所有Label 的list
+# labels 是所有Label 的list，对未标记集需要提供（未标记的名字）
 def process_file_rnn(filename, word_to_id, cat_to_id, unlabelflag, max_length=600):
     """将文件转换为id表示"""
     print ("Start to deal with file...")

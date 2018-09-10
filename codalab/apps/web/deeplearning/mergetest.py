@@ -34,7 +34,7 @@ except Exception: #ImportError
 import time
 from datetime import timedelta
 import heapq
-from data.rnnmodel import RNN_Probability_Model,TRNNConfig
+from rnnmodel import RNN_Probability_Model, TRNNConfig
 import random
 
 # import zip

@@ -51,7 +51,7 @@ from libact.labelers import IdealLabeler
 import tensorflow.contrib.keras as kr
 # from cp-cnews_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
 
-from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab, native_content
+from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab, native_content, read_file
 import time
 from datetime import timedelta
 import heapq
@@ -160,11 +160,11 @@ class BinaryClassTest(object):
         X_test, X_val, Y_test, Y_val = train_test_split(X_test_temp, Y_test_temp, test_size=0.8)
 
         # [TODO]将unlabel集label打为NONE同时与Train拼接
-        trn_ds = Dataset(np.concatenate(X_train, X_unlabel), np.concatenate(Y_train, [None] * len (Y_unlabel)))
+        trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len (Y_unlabel)]))
         val_ds = Dataset(X_val, Y_val)
         tst_ds = Dataset(X_test, Y_test)
 
-        draw_ds = Dataset(np.concatenate(X_train, X_test, X_val), np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
+        draw_ds = Dataset(np.concatenate([X_train, X_test, X_val]), np.concatenate([Y_train, [NONE] * (len(Y_test) + len(Y_val))]))
         return trn_ds, val_ds, tst_ds, draw_ds, unlabelnames
 
         # [TODO]将普通AL 从DAL中拆分出来并生成特定的函数 > DONE
@@ -176,35 +176,35 @@ class BinaryClassTest(object):
     def split_train_test_tal(self, train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength):
         if not os.path.exists(vocab_dir):
             build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
-            categories, cat_to_id = read_category()
-            words, word_to_id = read_vocab(vocab_dir)
+        categories, cat_to_id = read_category(train_dir)
+        words, word_to_id = read_vocab(vocab_dir)
 
-            data_id_train, label_id_train = process_file(train_dir, word_to_id, cat_to_id, 0, wordslength)
-            data_id_test, label_id_test = process_file(test_dir, word_to_id, cat_to_id, 0, wordslength)
-            data_id_unlabel, label_id_unlabel, unlabelnames = process_file(test_dir, word_to_id, cat_to_id, 1, wordslength)
-            # x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
-            # x_rnn, y_rnn = process_file_rnn(train_dir, word_to_id, cat_to_id, 600)
+        data_id_train, label_id_train = process_file(train_dir, word_to_id, cat_to_id, 0, wordslength)
+        data_id_test, label_id_test = process_file(test_dir, word_to_id, cat_to_id, 0, wordslength)
+        data_id_unlabel, label_id_unlabel, unlabelnames = process_file(test_dir, word_to_id, cat_to_id, 1, wordslength)
+        # x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
+        # x_rnn, y_rnn = process_file_rnntrain_dir(train_dir, word_to_id, cat_to_id, 600)
 
-            X_train = data_id_train
-            Y_train = self.convertlabel(label_id_train)
+        X_train = data_id_train
+        Y_train = np.array(label_id_train)
 
-            X_test = data_id_test
-            Y_test = self.convertlabel(label_id_test)
+        X_test = data_id_test
+        Y_test = np.array(label_id_test)
 
-            X_unlabel = data_id_unlabel
-            Y_unlabel = np.array(label_id_unlabel)
+        X_unlabel = data_id_unlabel
+        Y_unlabel = np.array(label_id_unlabel)
 
-            trn_ds = Dataset(np.concatenate(X_train, X_unlabel), np.concatenate(Y_train, [None] * len(Y_unlabel)))
-            tst_ds = Dataset(X_test, Y_test)
+        trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len(Y_unlabel)]))
+        tst_ds = Dataset(X_test, Y_test)
 
-            X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(np.concatenate(X_train, X_test), np.concatenate(Y_train, Y_test), test_size = 0.2)
-            trn_ds_fordraw = Dataset(X_train_fordraw, Y_train_fordraw)
-            tst_ds_fordraw = Dataset(X_test_fordraw, Y_test_fordraw)
+        X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(np.concatenate([X_train, X_test]), np.concatenate([Y_train, Y_test]), test_size = 0.2)
+        trn_ds_fordraw = Dataset(X_train_fordraw, Y_train_fordraw)
+        tst_ds_fordraw = Dataset(X_test_fordraw, Y_test_fordraw)
 
 
             # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
             #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
-            return trn_ds, val_ds, tst_ds, unlabelnames, trn_ds_fordraw, tst_ds_fordraw
+        return trn_ds, tst_ds, unlabelnames, trn_ds_fordraw, tst_ds_fordraw
 
     def split_onlytest(self, test_dir, vocab_dir, wordslength):
         #返回测试集样例
@@ -212,7 +212,7 @@ class BinaryClassTest(object):
         #     os.path.dirname(os.path.realpath(__file__)), localdir)
         # dataset_train = zipfile.ZipFile(docfile).read(localdir).decode('utf-8')
 
-        categories, cat_to_id = read_category()
+        categories, cat_to_id = read_category(test_dir)
         words, word_to_id = read_vocab(vocab_dir)
         x, y = process_file(test_dir, word_to_id, cat_to_id, wordslength)
 
@@ -234,9 +234,10 @@ class BinaryClassTest(object):
     # 【上传只有train】，随机划分一部分做test
     def split_train_test (self, train_dir, vocab_dir, test_size, wordslength):
         if not os.path.exists(vocab_dir):
+
             build_vocab(train_dir, vocab_dir, 1000)
 
-        categories, cat_to_id = read_category()
+        categories, cat_to_id = read_category(train_dir)
         words, word_to_id = read_vocab(vocab_dir)
 
         x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
@@ -375,7 +376,7 @@ class BinaryClassTest(object):
                         break
                     else:
                         pass
-        initdataset = Dataset(np.concatenate(initcontents, contents), np.concatenate(initlabel, len(initcontents)*[None]))
+        initdataset = Dataset(np.concatenate([initcontents, contents]), np.concatenate([initlabel, len(initcontents)*[None]]))
 
         return initdataset, len(initlabel), len(labels)
 
@@ -530,14 +531,21 @@ class BinaryClassTest(object):
 
     def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
-        trainentity = '/app/codalab/thirdpart/' + username + '/train.txt'
-        unlabelentity = '/app/codalab/thirdpart/' + username + '/unlabel.txt'
-        testentity = '/app/codalab/thirdpart/' + username + '/test.txt'
+        train_dir = '/app/codalab/thirdpart/' + username + '/train.txt'
+        unlabel_dir = '/app/codalab/thirdpart/' + username + '/unlabel.txt'
+        test_dir = '/app/codalab/thirdpart/' + username + '/test.txt'
         vocab_dir = '/app/codalab/thirdpart/' + username + '/vocab/vocab.txt'
+        if not os.path.exists('/app/codalab/thirdpart/'+ username + '/vocab/'):
+            os.makedirs('/app/codalab/thirdpart/'+ username + '/vocab/')
 
         # 提交未标记集的两种模式，一种有unlabel文件夹，一种有unlabel文件
         unlabeldatasetdir = '/app/codalab/thirdpart/' + username + '/unlabel/'
-        vocab_size = 1000
+
+        config = TRNNConfig()
+        batchsize = config.batch_size
+        wordslength = config.seq_length
+        vocab_size = config.vocab_size
+        numclass = config.num_classes
 
         # [Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
         #1是提交的两个文件，一个训练集一个测试集。
@@ -559,10 +567,12 @@ class BinaryClassTest(object):
         E_out1, E_out2 = [], []
         unlabeldict = {}
 
+        # n_labeled = [TODO]用户需要标记的个数
         #提交的是Train还是Train+Test
         if trainAndtest == 1:
-            trn_ds, val_ds, tst_ds, unlabelnames, trn_ds_fordraw_fully, tst_ds_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
-            trn_ds_fordraw, initlabelednumbers, quota = self.getlabelnum(trn_ds_fordraw)
+            n_labeled = 50
+            trn_ds, tst_ds, unlabelnames, trn_ds_fordraw_fully, tst_ds_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
+            trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(trn_ds_fordraw_fully)
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
             pass
