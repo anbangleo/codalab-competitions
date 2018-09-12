@@ -299,8 +299,6 @@ def split_train_test_rnn(train_dir, vocab_dir, vocab_size, test_size, val_size, 
 
     tst_ds_rnn = Dataset(X_test_rnn, y_test)
 
-
-
     fully_labeled_trn_ds_al = Dataset(X_train_al, y_train)
     fully_labeled_trn_ds_rnn = Dataset(X_train_rnn, y_train_rnn)
 

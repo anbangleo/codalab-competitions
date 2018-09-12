@@ -139,7 +139,7 @@ class BinaryClassTest(object):
         # 处理train
         data_id_train, label_id_train = process_file_rnn(train_dir, word_to_id, cat_to_id, 0,  wordslength)
         data_id_test, label_id_test = process_file_rnn(test_dir, word_to_id, cat_to_id, 0,  wordslength)
-        data_id_unlabel, label_id_unlabel, unlabelnames = process_file_rnn(test_dir, word_to_id, cat_to_id, 1,  wordslength)
+        data_id_unlabel, label_id_unlabel, unlabelnames = process_file_rnn(unlabel_dir, word_to_id, cat_to_id, 1,  wordslength)
 
         # 处理train
         y_train_temp = kr.utils.to_categorical(label_id_train, num_classes=len(cat_to_id))
@@ -181,7 +181,7 @@ class BinaryClassTest(object):
 
         data_id_train, label_id_train = process_file(train_dir, word_to_id, cat_to_id, 0, wordslength)
         data_id_test, label_id_test = process_file(test_dir, word_to_id, cat_to_id, 0, wordslength)
-        data_id_unlabel, label_id_unlabel, unlabelnames = process_file(test_dir, word_to_id, cat_to_id, 1, wordslength)
+        data_id_unlabel, label_id_unlabel, unlabelnames = process_file(unlabel_dir, word_to_id, cat_to_id, 1, wordslength)
         # x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
         # x_rnn, y_rnn = process_file_rnntrain_dir(train_dir, word_to_id, cat_to_id, 600)
 
@@ -354,30 +354,53 @@ class BinaryClassTest(object):
 
         return newpassword
 
-    # get the min nums of labeled initially
-    def getlabelnum(self, trn_ds):
+    # get the min nums of labeled initially, *args是可能的tst_dir等
+    def getlabelnum(self, trn_dir, *args):
         notolabel = [] # 记录需要标注的序号，将其余的元素置为None
         initlabel = []
         initcontents = []
         maxinitnum = 2 # 每个class允许的最大初始标记个数
 
-        contents, labels = read_file(trn_ds)
-        distinctlabel = list(set(labels))
+        contents, labels = read_file(trn_dir)
+        distinctlabel = list(set(labels)) # multi-class的多类标签
+        distinctlabel.sort()
         for i in distinctlabel:
-            for j in labels:
-                if j == i:
-                    contents.pop(labels.index(j))
+            for j in range(len(labels)):
+                if labels[j] == i:
+                    contents.pop(j)
                     labels.pop(j)
-                    initcontents.append(labels.index(j))
-                    initlabel.append(j)
+                    initcontents.append(contents[j])
+                    initlabel.append(labels[j])
                     maxinitnum = maxinitnum - 1
                     if maxinitnum == 0:
                         maxinitnum = 2
                         break
                     else:
                         pass
-        initdataset = Dataset(np.concatenate([initcontents, contents]), np.concatenate([initlabel, len(initcontents)*[None]]))
+        initdataset = Dataset(np.concatenate([initcontents, contents]), np.concatenate([initlabel, len(labels)*[None]]))
+        n_labeled_initial = len(initlabel)
+        quota_initial = len(labels)
+        # 如果传入了tst_dir
+        if len(args) == 1:
+            tst_dir = args[0]
+            contents_tst, labels_tst = read_file(tst_dir)
+            distinctlabel_tst = list(set(labels_tst))
+            distinctlabel_tst.sort()
+            if len(distinctlabel) != len(distinctlabel_tst):
+                ErrorMessage = 'Oppos! The Class Names/Numbers is different between train_dataset and test_dataset.'
+                return ErrorMessage
+            else:
+                for i in distinctlabel:
+                    if i in distinctlabel_tst:
+                        pass
+                    else:
+                        ErrorMessage = 'Oppos! The Class Names/Numbers is different between train_dataset and test_dataset.'
+                        return ErrorMessage
+            initdataset = Dataset(np.concatenate([initcontents, contents, contents_tst]), np.concatenate([initlabel, [None]*(len(labels) + len(labels_tst))]))
+            quota_initial = len(labels) + len(labels_tst)
 
+
+        # 对于模拟的图像，initlabel是初始标记的个数，labels一定是all-initlabel(初始数据集要求全ideal标记)
         return initdataset, len(initlabel), len(labels)
 
     def split_for_drawplot(self, trn_ds, numoftrain, quota):
@@ -429,7 +452,6 @@ class BinaryClassTest(object):
 
         for _ in range(quota):
             ask_id = qs.make_query()
-
             X, _ = zip(*trn_ds.data)
             c = len(X)
             lb = lbr.label(X[ask_id])
@@ -468,6 +490,9 @@ class BinaryClassTest(object):
                                           models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
         elif algorithm == 'us':
             qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
+            x,y = zip(*none_trn_ds.get_unlabeled_entries())
+            lenx = len(x)
+            leny = len(y)
             qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
         elif algorithm == 'albc':
             qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
@@ -503,8 +528,8 @@ class BinaryClassTest(object):
             qs_fordraw = QueryByCommittee(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
                                                                SVM(C=0.4, decision_function_shape='ovr'), ], )
         elif algorithm == 'us':
-            qs = UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr'))
-            qs_fordraw = UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr'))
+            qs = UncertaintySampling(trn_ds, method='sm',model=SVM(decision_function_shape='ovr'))
+            qs_fordraw = UncertaintySampling(none_trn_ds, method='sm',model=SVM(decision_function_shape='ovr'))
         elif algorithm == 'albl':
             qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
                 UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr')), QueryByCommittee(trn_ds, models=[
@@ -559,8 +584,6 @@ class BinaryClassTest(object):
 
         # Todo:ask_id是问的train+unlabel中unlabel的id
 
-
-
         # unlabeldatasetdir = os.listdir(unlabeldatasetdir)
 
         E_in1, E_in2 = [], []
@@ -572,7 +595,7 @@ class BinaryClassTest(object):
         if trainAndtest == 1:
             n_labeled = 50
             trn_ds, tst_ds, unlabelnames, trn_ds_fordraw_fully, tst_ds_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
-            trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(trn_ds_fordraw_fully)
+            trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(train_dir, test_dir)
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
             pass
@@ -582,7 +605,6 @@ class BinaryClassTest(object):
             # real_trn_ds = copy.deepcopy(trn_ds)
             # none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
-
         trn_ds_random = copy.deepcopy(trn_ds_fordraw) # 原验证集强行划分部分未知None做效果用
         qs_random = RandomSampling(trn_ds_random)
         lbr = IdealLabeler(trn_ds_fordraw_fully)
@@ -590,13 +612,16 @@ class BinaryClassTest(object):
 # ========================Binary====================
         if strategy == 'binary':
             if modelselect == 'logic':
+                debugx, debugy = trn_ds_fordraw.format_sklearn()
+                #[TODO]:当前标记的4个label都一致，需要调整。
                 qs, qs_fordraw = self.myRegression(algorithm, trn_ds, trn_ds_fordraw)
                 model = LogisticRegression()
                 E_in1, E_out1 = self.score_ideal(trn_ds_fordraw, tst_ds_fordraw, lbr, model, qs_fordraw, quota)
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota)
             elif modelselect == 'svm':
-                qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, trn_ds_fordraw)
-                model = SVM(kernel='linear', decision_function_shape='ovr')
+                qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw)
+                model = SVM(kernel='rbf', decision_function_shape='ovr')
+                trn_ds_fordraws = trn_ds_fordraw.get_unlabeled_entries()
                 E_in1, E_out1 = self.score_ideal(trn_ds_fordraw, tst_ds_fordraw, lbr, model, qs_fordraw, quota)
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota)
             else:
@@ -604,7 +629,7 @@ class BinaryClassTest(object):
 
         elif strategy == 'multiclass':
             if modelselect == 'svm':
-                qs, qs_fordraw = self.svmClassfiy(algorithm, trn_ds, none_trn_ds)
+                qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, none_trn_ds)
                 model = SVM(kernel='linear', decision_function_shape='ovr')
                 E_in1, E_out1 = self.score_ideal(none_trn_ds, tst_ds, lbr, model, qs_fordraw, quota)
                 E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds, lbr, model, qs_random, quota)
