@@ -53,13 +53,13 @@ from libact.labelers import IdealLabeler
 import tensorflow.contrib.keras as kr
 # from cp-cnews_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
 
-from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab, native_content, read_file
+from dealwordindict import read_vocab, read_category, batch_iter, process_file, process_file_rnn, build_vocab, native_content, read_file, read_file_nocut
 import time
 from datetime import timedelta
 import heapq
 from rnnmodel import RNN_Probability_Model, TRNNConfig
 import random
-
+import codecs
 
 class BinaryClassTest(object):
     def __init__(self):
@@ -175,7 +175,7 @@ class BinaryClassTest(object):
 
         # [TODO]返回包括Unlabel Names
 
-    def split_train_test_tal(self, train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength):
+    def split_train_test_tal(self, train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, maxinitnum, wordslength):
         if not os.path.exists(vocab_dir):
             build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
         categories, cat_to_id = read_category(train_dir)
@@ -183,13 +183,14 @@ class BinaryClassTest(object):
 
         data_id_train, label_id_train = process_file_rnn(train_dir, word_to_id, cat_to_id, 0, wordslength)
         data_id_test, label_id_test = process_file_rnn(test_dir, word_to_id, cat_to_id, 0, wordslength)
-        data_id_unlabel, label_id_unlabel, unlabelnames = process_file_rnn(unlabel_dir, word_to_id, cat_to_id, 1, wordslength)
+        data_id_unlabel, label_id_unlabel, unlabelcontents, unlabelnames = process_file_rnn(unlabel_dir, word_to_id, cat_to_id, 1, wordslength)
         # x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
         # x_rnn, y_rnn = process_file_rnntrain_dir(train_dir, word_to_id, cat_to_id, 600)
         X_train = []
         X_test = []
         X_unlabel = []
         res = []
+        maxinitnums = maxinitnum
 
         for i in data_id_train:
             for j in range(wordslength):
@@ -249,7 +250,6 @@ class BinaryClassTest(object):
         numofclasses_test = len(distinctlabel_test)
         initcontents = []
         initlabel = []
-        maxinitnum = 5
         initlabel = np.array(initlabel)
         initcontents = np.array(initcontents)
         # [TODO] check the nums equal
@@ -261,13 +261,12 @@ class BinaryClassTest(object):
                     initlabel = np.append(initlabel, Y_train_fordraw[j])
                     X_train_fordraw = np.delete(X_train_fordraw, j)
                     Y_train_fordraw = np.delete(Y_train_fordraw, j)
-                    maxinitnum = maxinitnum - 1
-                    if maxinitnum == 0:
-                        maxinitnum = 5
+                    maxinitnums = maxinitnums - 1
+                    if maxinitnums == 0:
+                        maxinitnums = maxinitnum
                         break
                     else:
                         pass
-
 
         # trn_ds_fordraw_fully = Dataset(X_train_fordraw, Y_train_fordraw)
 
@@ -279,7 +278,7 @@ class BinaryClassTest(object):
 
             # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
             #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
-        return trn_ds, tst_ds, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw
+        return trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw
 
     def split_onlytest(self, test_dir, vocab_dir, wordslength):
         #返回测试集样例
@@ -651,10 +650,6 @@ class BinaryClassTest(object):
                                           models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
         elif algorithm == 'us':
             qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
-            x,y = zip(*none_trn_ds.get_unlabeled_entries())
-            lenx = len(x)
-            leny = len(y)
-            ll = none_trn_ds.format_sklearn()
             qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
         elif algorithm == 'albc':
             qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
@@ -728,11 +723,14 @@ class BinaryClassTest(object):
         # 提交未标记集的两种模式，一种有unlabel文件夹，一种有unlabel文件
         unlabeldatasetdir = '/app/codalab/thirdpart/' + username + '/unlabel/'
 
+        # 将最后问询的结果以csv的格式返回
+        willlabel_csvdir = '/app/codalab/static/img/partpicture/' + username + '/dict.csv'
         config = TRNNConfig()
         batchsize = config.batch_size
         wordslength = config.seq_length
         vocab_size = config.vocab_size
         numclass = config.num_classes
+
 
         # [Todo]:需要标记的个数,是否提交的是训练集+测试集，如果只提交一个测试集，那么划分训练集的比例，
         #1是提交的两个文件，一个训练集一个测试集。
@@ -742,22 +740,22 @@ class BinaryClassTest(object):
         # pushallask = 1
         #如果是交互式问询的话，那么需要标记的标记列表
         #interlabel = ['0','1']
-        askidlist = []
+
 
         # Todo:ask_id是问的train+unlabel中unlabel的id
-
-        # unlabeldatasetdir = os.listdir(unlabeldatasetdir)
-
+        maxinitnum = 5 # 为跑图像所允许的每一类别最大的初始标记个数
+        unlabeldict = {} # 用作Unlabel的映射关系
+        asknamelist = [] # 所有被问询的Unlabel
         E_in1, E_in2 = [], []
         E_out1, E_out2 = [], []
-        unlabeldict = {}
-
-        # n_labeled = [TODO]用户需要标记的个数
+        if os.path.exists(unlabeldatasetdir):
+            unlabeldatasetdir = os.listdir(unlabeldatasetdir)
+        else:
+            unlabeldatasetdir = []
 
         #提交的是Train还是Train+Test
         if trainAndtest == 1:
-            n_labeled = 50
-            trn_ds, tst_ds, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
+            trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, maxinitnum, wordslength)
             # trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(train_dir, test_dir)
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
         else:
@@ -772,10 +770,8 @@ class BinaryClassTest(object):
         qs_random = RandomSampling(trn_ds_random)
         lbr = IdealLabeler(trn_ds_fordraw_fully)
 
-# ========================Binary====================
         if strategy == 'binary':
             if modelselect == 'logic':
-                # debugx, debugy = trn_ds_fordraw.format_sklearn()
                 qs, qs_fordraw = self.myRegression(algorithm, trn_ds, trn_ds_fordraw_none)
                 model = LogisticRegression()
                 E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
@@ -805,8 +801,6 @@ class BinaryClassTest(object):
 
         self.plotforimage(np.arange(1, quota_fordraw + 1), E_in1, E_in2, E_out1, E_out2, username)
 
-# dir = '/app/codalab/static/img/partpicture/'+username+'/'
-
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
             first, scores = qs.make_query(return_score = True)
@@ -814,19 +808,28 @@ class BinaryClassTest(object):
             num_score_array = np.array(num_score)
             max_n = heapq.nlargest(quota, range(len(num_score_array)), num_score_array.take)
 
+            # 只返回文件名
             if len(unlabeldatasetdir) < 1:
-                for ask_id in max_n:
-                    filename = unlabelnames[ask_id]
-                    askidlist.append(filename)
-
-                csvdir = '/app/codalab/static/img/partpicture/'+username+'/dict.csv'
-                with open(csvdir, 'wb') as csv_file:
+                with codecs.open(willlabel_csvdir, 'wb', encoding='utf-8') as csv_file:
                     writer = csv.writer(csv_file)
-                    writer.writerow(['name'])
-                    for unlabelname in askidlist:
-                        writer.writerow([unlabelname])
+                    writer.writerow(['name','entity'])
+                    for ask_id in max_n:
+                        asknamelist.append(unlabelnames[ask_id])
+                        writer.writerow([unlabelnames[ask_id], unlabelcontents[ask_id]])
+                return asknamelist, willlabel_csvdir
 
-                return askidlist, csvdir
+                # for ask_id in max_n:
+                #     filename = unlabelnames[ask_id]
+                #     askidlist.append(filename)
+                # csvdir = '/app/codalab/static/img/partpicture/' + username + '/dict.csv'
+                # with open(csvdir, 'wb') as csv_file:
+                #     writer = csv.writer(csv_file)
+                #     writer.writerow(['name'])
+                #     for unlabelname in askidlist:
+                #         writer.writerow([unlabelname])
+                # return askidlist, csvdir
+
+            # 如果提交的是一个未标注的文件夹
             else:
                 for ask_id in max_n:
                     filename = unlabelnames[ask_id]
@@ -836,16 +839,16 @@ class BinaryClassTest(object):
                             filebody = f.read()
                             unlabeldict[filename] = filebody
 
-                    askidlist.append(filename)
+                    asknamelist.append(filename)
 
                 csvdir = '/app/codalab/static/img/partpicture/'+username+'/dict.csv'
-                with open(csvdir, 'wb') as csv_file:
+                with open(willlabel_csvdir, 'wb') as csv_file:
                     writer = csv.writer(csv_file)
                     writer.writerow(['name', 'entity'])
                     for key, value in unlabeldict.items():
                         #askidlist.append(key)
                         writer.writerow([key, value])
-                return askidlist,csvdir
+                return asknamelist,willlabel_csvdir
 
         # 向标注平台发送 [TODO]需要和标注平台融合
         else:
@@ -861,7 +864,7 @@ class BinaryClassTest(object):
                         filebody = f.read()
                         unlabeldict[filename] = filebody
 
-                askidlist.append(filename)
+                asknamelist.append(filename)
 
             csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
             with open(csvdir, 'wb') as csv_file:
@@ -876,4 +879,4 @@ class BinaryClassTest(object):
 
             rec_status = 0
             rec_url = 'www.baidu.com'
-            return rec_status, rec_url, askidlist
+            return rec_status, rec_url, asknamelist

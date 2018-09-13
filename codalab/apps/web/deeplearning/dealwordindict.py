@@ -59,6 +59,20 @@ def read_file(filename):
                 pass
     return contents, labels
 
+def read_file_nocut(filename):
+    """读取文件数据"""
+    contents, labels = [], []
+    with open_file(filename) as f:
+        for line in f:
+            try:
+                label, content = line.strip().split('\t')
+                if content:
+                    contents.append(native_content(content))
+                    labels.append(native_content(label))
+            except:
+                pass
+    return contents, labels
+
 # 可变参数为可能的【未标注集】
 def build_vocab(train_dir, vocab_dir, vocab_size=1000, *args):
     """根据训练集构建词汇表，存储"""
@@ -203,7 +217,7 @@ def process_file(filename, word_to_id, cat_to_id, unlabelflag, max_length=600):
     print ("Finish dealing with files!")
 
     if unlabelflag == 1:
-        return x_pad, label_id, labels
+        return x_pad, label_id, contents, labels
     else:
         return x_pad, label_id
 
@@ -224,7 +238,8 @@ def process_file_rnn(filename, word_to_id, cat_to_id, unlabelflag, max_length=60
     # y_pad = kr.utils.to_categorical(label_id, num_classes=len(cat_to_id))  # 将标签转换为one-hot表示
     print ("Finish dealing with files!")
     if unlabelflag == 1:
-        return data_id, label_id, labels
+        contents, labels = read_file_nocut(filename)
+        return data_id, label_id, contents, labels
     else:
         return data_id, label_id
 
