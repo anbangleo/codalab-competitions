@@ -239,7 +239,8 @@ class BinaryClassTest(object):
         trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len(Y_unlabel)]))
         tst_ds = Dataset(X_test, Y_test)
 
-        X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(np.concatenate([X_train, X_test]), np.concatenate([Y_train, Y_test]), test_size = 0.2)
+        X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(np.concatenate([X_train, X_test]), np.concatenate([Y_train, Y_test]), test_size = 0.3)
+
 
         # X_train_fordraw_copy = copy.deepcopy(X_train_fordraw)
         # Y_train_fordraw_copy = copy.deepcopy(Y_train_fordraw)
@@ -250,122 +251,42 @@ class BinaryClassTest(object):
         numofclasses_test = len(distinctlabel_test)
         initcontents = []
         initlabel = []
-        initlabel = np.array(initlabel)
-        initcontents = np.array(initcontents)
+        # initlabel = np.array(initlabel)
+        # initcontents = np.array(initcontents)
         # [TODO] check the nums equal
 
         for i in distinctlabel_train:
             for j in range(len(Y_train_fordraw)):
                 if Y_train_fordraw[j] == i:
-                    initcontents = np.append(initcontents, X_train_fordraw[j])
-                    initlabel = np.append(initlabel, Y_train_fordraw[j])
-                    X_train_fordraw = np.delete(X_train_fordraw, j)
-                    Y_train_fordraw = np.delete(Y_train_fordraw, j)
+                    initcontents.append(X_train_fordraw[j])
+                    initlabel.append(Y_train_fordraw[j])
+
+                    # initcontents = np.append(initcontents, X_train_fordraw[j])
+                    # initlabel = np.append(initlabel, Y_train_fordraw[j])
+                    X_train_fordraw = np.delete(X_train_fordraw, j, axis=0)
+                    Y_train_fordraw = np.delete(Y_train_fordraw, j, axis=0)
                     maxinitnums = maxinitnums - 1
                     if maxinitnums == 0:
                         maxinitnums = maxinitnum
                         break
                     else:
                         pass
+        initlabel = np.array(initlabel)
+        initcontents = np.array(initcontents)
 
         # trn_ds_fordraw_fully = Dataset(X_train_fordraw, Y_train_fordraw)
 
-        trn_ds_fordraw_fully = Dataset(np.concatenate([initcontents, X_train_fordraw]).reshape(-1,1), np.concatenate([initlabel, Y_train_fordraw]))
-        trn_ds_fordraw_none = Dataset(np.concatenate([initcontents, X_train_fordraw]).reshape(-1,1), np.concatenate([initlabel, [None] * len(Y_train_fordraw)]))
 
-        tst_ds_fordraw = Dataset(X_test_fordraw.reshape(-1,1), Y_test_fordraw)
+
+        trn_ds_fordraw_fully = Dataset(np.concatenate([initcontents, X_train_fordraw]), np.concatenate([initlabel, Y_train_fordraw]))
+        trn_ds_fordraw_none = Dataset(np.concatenate([initcontents, X_train_fordraw]), np.concatenate([initlabel, [None] * len(Y_train_fordraw)]))
+
+        tst_ds_fordraw = Dataset(X_test_fordraw, Y_test_fordraw)
         quota_fordraw = len(Y_train_fordraw)
 
             # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
             #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
         return trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw
-
-    def split_onlytest(self, test_dir, vocab_dir, wordslength):
-        #返回测试集样例
-        # dataset_train = os.path.join(
-        #     os.path.dirname(os.path.realpath(__file__)), localdir)
-        # dataset_train = zipfile.ZipFile(docfile).read(localdir).decode('utf-8')
-
-        categories, cat_to_id = read_category(test_dir)
-        words, word_to_id = read_vocab(vocab_dir)
-        x, y = process_file(test_dir, word_to_id, cat_to_id, wordslength)
-
-        listy = []
-        for i in range(np.shape(y)[0]):
-            for j in range(np.shape(y)[1]):
-                if y[i][j] == 1:
-                    listy.append(j)
-        listy = np.array(listy)
-        X_test, X_train, y_test, y_train = \
-            train_test_split(x, listy, test_size=1)
-
-        test_ds = Dataset(X_test, y_test)
-        return test_ds
-        # x, y = import_libsvm_sparse(dataset_train).format_sklearn()
-        # test_ds = Dataset(x,y)
-        # return test_ds
-
-    # 【上传只有train】，随机划分一部分做test
-    def split_train_test (self, train_dir, vocab_dir, test_size, wordslength):
-        if not os.path.exists(vocab_dir):
-
-            build_vocab(train_dir, vocab_dir, 1000)
-
-        categories, cat_to_id = read_category(train_dir)
-        words, word_to_id = read_vocab(vocab_dir)
-
-        x, y = process_file(train_dir, word_to_id, cat_to_id, wordslength)
-        # x_rnn, y_rnn = process_file_rnn(train_dir, word_to_id, cat_to_id, 600)
-
-        listy = []
-        for i in range(np.shape(y)[0]):
-            for j in range(np.shape(y)[1]):
-                if y[i][j] == 1:
-                    listy.append(j)
-        listy = np.array(listy)
-
-        # dataset_train = train_dir
-        # x, y = import_libsvm_sparse(dataset_train).format_sklearn()
-
-        X_train, X_test, y_train, y_test = train_test_split(x, listy, test_size=test_size)
-
-        #train_ds = Dataset(X_train,label_train)
-        fully_tst_ds = Dataset(X_test, y_test)
-
-        X_val, X_real_test, y_val, y_real_test = \
-            train_test_split(X_test, y_test, test_size=0.5)
-
-        tst_ds = Dataset(X_real_test, y_real_test)
-        val_ds = Dataset(X_val, y_val)
-
-        # fully_labeled_trn_ds = Dataset(X_train, y_train)
-
-        return X_train, y_train, fully_tst_ds, tst_ds, val_ds
-
-    # 把Train.txt和Unlabel.txt 两个文件结合起来，形成一个
-    def split_train_test_unlabel(self, train, trainlabel, unlabeltext):
-
-        #原训练集
-        numoftrain = len(train)
-        #未标记集
-        allunlabel = np.loadtxt(unlabeltext, dtype = str)
-
-        #减1减去的是unlabel向量的[名称]
-        unlabel_data = np.zeros((np.shape(allunlabel)[0], np.shape(allunlabel)[1]-1))
-        unlabel_name = []
-
-        for i in range(np.shape(allunlabel)[0]):
-            unlabel_name.append(allunlabel[i][0])
-            for j in range(np.shape(allunlabel)[1]-1):
-                unlabel_data[i][j] = allunlabel[i][j+1].split(':')[1]
-
-        x = np.vstack((train, unlabel_data))
-        y = np.hstack((trainlabel,[None]*len(allunlabel)))
-
-        trn_ds = Dataset(x,y)
-
-        #返回训练集，训练集的个数，未标记数据的名称list
-        return trn_ds, numoftrain, unlabel_name
 
     def sendfile(self, filedir, filetype, username, useremail, password, numneedtobemarked):
         SIZE = 65535
@@ -428,91 +349,6 @@ class BinaryClassTest(object):
 
         return newpassword
 
-    def split_train_test_for_draw(self, trn_dir,tst_dir):
-        if not os.path.exists(vocab_dir):
-            build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
-        categories, cat_to_id = read_category(train_dir)
-        words, word_to_id = read_vocab(vocab_dir)
-
-        data_id_train, label_id_train = process_file_rnn(train_dir, word_to_id, cat_to_id, 0, wordslength)
-        data_id_test, label_id_test = process_file_rnn(test_dir, word_to_id, cat_to_id, 0, wordslength)
-        X_train = []
-        X_test = []
-        res = []
-
-        for i in data_id_train:
-            for j in range(wordslength):
-                a = i.count(j)
-                if a > 0:
-                    res.append(a)
-                else:
-                    res.append(0)
-            X_train.append(res)
-            res = []
-        res = []
-
-        for i in data_id_test:
-            for j in range(wordslength):
-                a = i.count(j)
-                if a > 0:
-                    res.append(a)
-                else:
-                    res.append(0)
-            X_test.append(res)
-            res = []
-        Y_train = np.array(label_id_train)
-        Y_test = np.array(label_id_test)
-
-        distinctlabel = list(set(Y_train)) # multi-class的多类标签
-        distinctlabel.sort()
-        notolabel = [] # 记录需要标注的序号，将其余的元素置为None
-        initlabel = []
-        initcontents = []
-        maxinitnum = 2 # 每个class允许的最大初始标记个数
-
-        initlabel = np.array(initlabel)
-        initcontents = np.array(initcontents)
-        for i in distinctlabel:
-            for j in range(len(Y_train)):
-                if Y_train[j] == i:
-                    X_train = np.delete(X_train, j)
-                    Y_train = np.delete(Y_train, j)
-                    initcontents = np.append(initcontents, X_train[j])
-                    initlabel = np.append(initlabel, Y_train[j])
-                    initcontents.append(X_train[j])
-                    initlabel.append(Y_train[j])
-                    maxinitnum = maxinitnum - 1
-                    if maxinitnum == 0:
-                        maxinitnum = 2
-                        break
-                    else:
-                        pass
-
-        distinctlabel_tst = list(set(Y_test))  # multi-class的多类标签
-        distinctlabel_tst.sort()
-
-
-
-        if len(distinctlabel) != len(distinctlabel_tst):
-            ErrorMessage = 'Oppos! The Class Names/Numbers is different between train_dataset and test_dataset.'
-            return ErrorMessage
-        else:
-            for i in distinctlabel:
-                if i in distinctlabel_tst:
-                    pass
-                else:
-                    ErrorMessage = 'Oppos! The Class Names/Numbers is different between train_dataset and test_dataset.'
-                    return ErrorMessage
-
-        trn_ds_for_draw_none = Dataset(np.concatenate([initcontents, X_train]), np.concatenate([initlabel, [None]*(len(X_train) + len(Y_train))]))
-        trn_ds_for_draw_fully = Dataset(np.concatenate([initcontents, X_train]))
-        quota_initial = len(X_train) + len(Y_train)
-
-
-        # 对于模拟的图像，initlabel是初始标记的个数，labels一定是all-initlabel(初始数据集要求全ideal标记)
-        return initdataset, len(initlabel), len(labels)
-
-
 
     # get the min nums of labeled initially, *args是可能的tst_dir等
     def getlabelnum(self, trn_dir, *args):
@@ -563,49 +399,6 @@ class BinaryClassTest(object):
         # 对于模拟的图像，initlabel是初始标记的个数，labels一定是all-initlabel(初始数据集要求全ideal标记)
         return initdataset, len(initlabel), len(labels)
 
-    def split_for_drawplot(self, trn_ds, numoftrain, quota):
-        #n_labeled = numoftrain - quota
-
-        #if n_labeled < 10:
-        #    n_labeled = 1
-        #else:
-        #    n_labeled = 5
-
-        n_labeled = 0
-        flag = 0
-        #n_labeled = numoftrain - quota
-        #n_labeled = int(n_labeled/6)
-        #if n_labeled < 1:
-        #    n_labeled = 1
-
-        x_train,y_train = trn_ds.format_sklearn()[0],trn_ds.format_sklearn()[1]
-
-        try:
-            if numoftrain >=1000:
-                n_labeled = int(numoftrain/40)
-            elif numoftrain >=500:
-                n_labeled = int(numoftrain/20)
-            elif numoftrain >=100:
-                n_labeled = int(numoftrain/10)
-            else:
-                n_labeled = 6
-        except:
-            for i in range(len(y_train)):
-                if y_train[i] != y_train[i+1]:
-                    flag = 1
-                    n_labeled = i + 2
-                    break
-                flag = -1
-        if flag == -1:
-            pass#[todo]报错
-
-
-        none_trn_ds = Dataset(x_train, np.concatenate(
-            [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
-
-        return none_trn_ds
-
-
     #空跑测试集做图像
     def score_ideal(self, trn_ds, tst_ds, lbr, model, qs, quota):
         E_in, E_out = [], []
@@ -622,14 +415,101 @@ class BinaryClassTest(object):
 
         return E_in, E_out
 
+    def realrun_random(self, trn_ds, tst_ds, lbr, model, qs, quota, batchsize):
+        E_in, E_out = [], []
+        intern = 0
+        finalnum = 0
+        # print ("[Important] Start the Random Train:")
+        # start_time = time.time()
+        if quota % batchsize == 0:
+            intern = int(quota / batchsize)
+        else:
+            intern = int(quota / batchsize) + 1
+            finalnum = int(quota % batchsize)
+
+        for t in range(intern):
+            unlabeled_entry_ids, X_pool = zip(*trn_ds.get_unlabeled_entries())
+            if t == intern - 1 and finalnum != 0:
+                max_n = random.sample(unlabeled_entry_ids, finalnum)
+            else:
+                max_n = random.sample(unlabeled_entry_ids, batchsize)
+
+            X, _ = zip(*trn_ds.data)
+            for ask_id in max_n:
+                lb = lbr.label(X[ask_id])
+                trn_ds.update(ask_id, lb)
+
+            model.train(trn_ds)
+            E_in = np.append(E_in, 1 - model.score(trn_ds))
+            E_out = np.append(E_out, 1 - model.score(tst_ds))
+            # print (E_out)
+
+        # E_time = get_time_dif(start_time)
+        # print("time to train" + str(time_dif))
+
+        return E_in, E_out
+
+    def realrun_qs(self, trn_ds, tst_ds, lbr, model, qs, quota, batchsize):
+        E_in, E_out = [], []
+        intern = 0
+        finalnum = 0
+
+        # [TODO] fix the issue
+        # test_trnds = trn_ds.get_labeled_entries()
+        # print ttt
+
+        # print ("[Important] Start the UncertaintySampling Train:")
+        # start_time = time.time()
+        if quota % batchsize == 0:
+            intern = int(quota / batchsize)
+        else:
+            intern = int(quota / batchsize) + 1
+            finalnum = int(quota % batchsize)
+
+        for t in range(intern):
+            # print ("[QS]this is the " + str(t) + " times to ask")
+            first, scores = qs.make_query(return_score=True)
+
+            # python 2&&python3
+            number, num_score = zip(*scores)[0], zip(*scores)[1]
+            # num_score = next(zip*scores)
+            # itscore = zip(*scores)
+            # number = next(itscore)
+            # num_score = next(itscore)
+
+            num_score_array = np.array(num_score)
+            # max_n = heapq.nlargest(quota, range(len(num_score_array)), num_score_array.take)
+
+            if t == intern - 1 and finalnum != 0:
+                max_n = heapq.nlargest(finalnum, range(len(num_score_array)), num_score_array.take)
+            else:
+                max_n = heapq.nlargest(batchsize, range(len(num_score_array)), num_score_array.take)
+
+            unlabeled_entry_ids, X_pool = zip(*trn_ds.get_unlabeled_entries())
+
+            X, _ = zip(*trn_ds.data)
+            # print (max_n)
+            for ask_id in max_n:
+                real_id = unlabeled_entry_ids[ask_id]
+                lb = lbr.label(X[real_id])
+                trn_ds.update(real_id, lb)
+
+            model.train(trn_ds)
+
+            E_in = np.append(E_in, 1 - model.score(trn_ds))
+            E_out = np.append(E_out, 1 - model.score(tst_ds))
+        # E_time = get_time_dif(start_time)
+
+        return E_in, E_out
+
     def plotforimage(self, query_num, E_in1, E_in2, E_out1, E_out2, username):
         dir = '/app/codalab/static/img/partpicture/'+username+'/'
         if os.path.isfile(dir + 'compare.png'):
             os.remove(dir + 'compare.png')
-        plt.plot(query_num, E_in1, 'b', label='qs Ein')
-        plt.plot(query_num, E_in2, 'r', label='random Ein')
-        plt.plot(query_num, E_out1, 'g', label='qs Eout')
-        plt.plot(query_num, E_out2, 'k', label='random Eout')
+        # plt.plot(query_num, E_in1, 'b', label='AL_train')
+        # plt.plot(query_num, E_in2, 'r', label='Random_train')
+        plt.plot(query_num, E_out1, 'r', label='AL')
+        plt.plot(query_num, E_out2, 'b', label='Random')
         plt.xlabel('Number of Queries')
         plt.ylabel('Error')
         plt.title('Experiment Result')
@@ -758,6 +638,13 @@ class BinaryClassTest(object):
             trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, maxinitnum, wordslength)
             # trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(train_dir, test_dir)
         # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
+        #     a =  len(trn_ds.get_labeled_entries()) # 89
+        #     b =  len(tst_ds.get_labeled_entries()) # 90
+        #     c =  len(trn_ds_fordraw_fully.get_labeled_entries()) # 143
+        #     d =  len(trn_ds_fordraw_none.get_labeled_entries()) # 45
+        #     e = len(tst_ds_fordraw.get_labeled_entries()) # 36
+        #     f = quota_fordraw #98
+        #     print cccc
         else:
             pass
             # 提交的只有一个Train
@@ -787,9 +674,13 @@ class BinaryClassTest(object):
         elif strategy == 'multiclass':
             if modelselect == 'svm':
                 qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
-                model = SVM(kernel='linear', decision_function_shape='ovr')
-                E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
-                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
+                model = SVM(kernel='rbf', decision_function_shape='ovr')
+                # E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
+                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, 1)
+                model = SVM(kernel='rbf', decision_function_shape='ovr')
+                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random,
+                                                quota_fordraw, 1)
+                # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
             else:
                 pass
 
