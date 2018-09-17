@@ -2158,7 +2158,8 @@ def developerlab(request):
                 bmtpassword = request.POST.get('bmtpassword')
 
 
-                testsize = request.POST.get('testsize')
+                # testsize = request.POST.get('testsize')
+                batchsize = request.POST.get('batchsize')
                 numneedtobelabeled = int(request.POST.get('numneedtobelabeled'))
                 markmethod = request.POST.get('markmethod')#returnentities, sendtoBMT
 
@@ -2166,18 +2167,22 @@ def developerlab(request):
                 useremail = str(request.user.email)
                 #userpassword = str(request.user.password)
 
-                if not testsize:
-                    trainandtest = 1
-                else:
-                    testsize = float(testsize)
-                    trainandtest = 0
+                # if not testsize:
+                #     trainandtest = 1
+                # else:
+                #     testsize = float(testsize)
+                #     trainandtest = 0
 
+                if batchsize:
+                    batchsize = int(batchsize)
+                else:
+                    batchsize = 1
                 if markmethod == 'returnentities':
                     markmethod = 1
                     ifsendtoBMT = 0
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize,markmethod
-                    di, csvdir = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
+                    di, csvdir = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled, 1, batchsize, markmethod, docfilecopy, username, useremail, bmtpassword)
 
                     picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
                     csv_url = '/static/img/partpicture/'+str(request.user)+'/dict.csv'
@@ -2188,7 +2193,7 @@ def developerlab(request):
                     ifsendtoBMT = 1
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize, markmethod
-                    rec_status, rec_url, di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled,1,testsize,markmethod,docfilecopy,username,useremail,bmtpassword)
+                    rec_status, rec_url, di = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled, 1, batchsize, markmethod, docfilecopy, username, useremail,bmtpassword)
                     picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
                     return HttpResponseRedirect(reverse('developerlab_upload'),{'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url,'picture_url':picture_url})
             else:

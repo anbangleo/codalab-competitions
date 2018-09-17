@@ -591,7 +591,7 @@ class BinaryClassTest(object):
 
         return qs, qs_fordraw
 
-    def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, testsize, pushallask,docfile,username,useremail,bmtpassword):
+    def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, batchsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         train_dir = '/app/codalab/thirdpart/' + username + '/train.txt'
         unlabel_dir = '/app/codalab/thirdpart/' + username + '/unlabel.txt'
@@ -661,13 +661,13 @@ class BinaryClassTest(object):
             if modelselect == 'logic':
                 qs, qs_fordraw = self.myRegression(algorithm, trn_ds, trn_ds_fordraw_none)
                 model = LogisticRegression()
-                E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
-                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
+                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
+                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
             elif modelselect == 'svm':
                 qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
                 model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
-                E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
+                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
+                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
             else:
                 pass
 
@@ -676,10 +676,8 @@ class BinaryClassTest(object):
                 qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
                 model = SVM(kernel='rbf', decision_function_shape='ovr')
                 # E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
-                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, 1)
-                model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random,
-                                                quota_fordraw, 1)
+                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
+                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
                 # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
             else:
                 pass
@@ -689,8 +687,12 @@ class BinaryClassTest(object):
 
         else:
             pass
+        if quota % batchsize == 0:
+            intern = int(quota_fordraw / batchsize)
+        else:
+            intern = int(quota_fordraw / batchsize) + 1
 
-        self.plotforimage(np.arange(1, quota_fordraw + 1), E_in1, E_in2, E_out1, E_out2, username)
+        self.plotforimage(np.arange(1, intern + 1), E_in1, E_in2, E_out1, E_out2, username)
 
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:

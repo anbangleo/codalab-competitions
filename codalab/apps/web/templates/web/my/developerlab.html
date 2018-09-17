@@ -155,8 +155,11 @@ $(document).ready(function() {
                     <div id="algformultilabel" style="display: none;">
                         <input type="radio" name="alg" id="alg_us_label" value="us" checked><label for="alg_us_label">不确定采样法(Uncertainty Sampling)</label>
                     </div>
-
                 </td>
+            </tr>
+            <tr>
+                <th>Batch大小</th>
+                <td align="left"><input type="text" id="idbatchsize" name="batchsize">如不填写则默认为1</td>
             </tr>
             <!--如果是压缩包-->
             {% if ifzip == 1 %}
