@@ -25,9 +25,16 @@
             </div>
             <div class="col-sm-4 col-md-4 right-panel">
                 {{ competition.get_start_date|date:"M d, Y" }}-{% if competition.end_date %}{{ competition.end_date|date:"M d, Y" }}{% else %}
+
                 <i>{% trans 'No end date' %}</i>{% endif %}<br>
-                <b>{{ competition.get_participant_count }}</b> {% trans 'participant'%}
-                <br>
+
+                {% if competition.num_participants %}
+                    {# try and use prefected participant count #}
+                    <b>{{ competition.num_participants }}</b> {% trans 'participant'%}<br>
+                {% else %}
+                    <b>{{ competition.get_participant_count }}</b> {% trans 'participant'%}<br>
+                {% endif %}
+s
                 {% if competition.reward and competition.reward > 0 %}
                 {% trans 'USD'%} <b>{% trans '$'%}{{ competition.reward|intcomma }}</b> {% trans 'reward'%}
                 {% endif %}

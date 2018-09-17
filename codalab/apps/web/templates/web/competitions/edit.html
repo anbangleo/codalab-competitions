@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% load staticfiles %}
 {% load codalab_tags %}
-{% load i18n %}
-{% block head_title %}{% trans "Edit Competition"%}{% endblock head_title %}
-{% block page_title %}{% trans "Edit Competition"%}{% endblock page_title %}
+
+{% block head_title %}Edit Competition{% endblock head_title %}
+{% block page_title %}Edit Competition{% endblock page_title %}
 
 {% block extra_headers %}
     <link rel="stylesheet" href="{{ STATIC_URL }}css/jquery.datetimepicker.css">
@@ -15,13 +15,13 @@
 
 {% block content %}
 <div class='container-fluid'>
-    <a href="{% url "competitions:view" pk=competition.pk %}" >{% trans 'Go Back to Competition Homepage' %}</a>
-    <a class="pull-right" href="{% url 'competitions:docs' %}" title="Get help with creating a competition" target="_blank"><span class="glyphicon glyphicon-question-sign"></span> {% trans 'Help' %}</a>
+    <a href="{% url "competitions:view" pk=competition.pk %}" >Go Back to Competition Homepage</a>
+    <a class="pull-right" href="https://github.com/codalab/codalab/wiki/User_Competition-Roadmap" title="Get help with creating a competition" target="_blank"><span class="glyphicon glyphicon-question-sign"></span> Help</a>
 </div>
-<a class="btn btn-secondary" href="{% url 'competitions:download_yaml' competition_pk=competition.pk %}">{% trans 'Download original YAML file' %}</a>
+<a class="btn btn-secondary" href="{% url 'competitions:download_yaml' competition_pk=competition.pk %}">Download original YAML file</a>
 <form id="competition_edit_form" class="form-horizontal form-controller margin-top" data-abide enctype="multipart/form-data" method="POST">{% csrf_token %}
     <fieldset>
-        <legend>{% trans "General Information" %}</legend>
+        <legend>General Information</legend>
         {% for field in form %}
             <div class="fieldWrapper form-group {% field_type field %}">
                 {% if field|is_checkbox %}
@@ -35,6 +35,20 @@
                             {% if field.help_text %}
                                 <i>{{ field.help_text }}</i>
                             {% endif %}
+                        </div>
+                    </div>
+                {% elif field.label == 'Admins' %}
+                    <label for="{{field.id_for_label}}" class="col-sm-3 control-label">
+                        {{field.label}}{{form.label_suffix}}
+                    </label>
+                    <div class="col-sm-9">
+                        <div class="field-container">
+                            <select multiple id="id_admins" name="admins">
+                                {% for admin in competition.admins.all %}
+                                    <option value="{{ admin.pk }}" selected>{{ admin }}</option>
+                                {% endfor %}
+                            </select>
+                            {{ field.errors }}
                         </div>
                     </div>
                 {% else %}
@@ -61,7 +75,7 @@
                 <div class="panel panel-primary page">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            {% trans 'Web Page' %}
+                            Web Page
                         </h3>
                     </div>
                     <div class="panel-body">
@@ -104,7 +118,7 @@
                 <div class="panel panel-default page">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            {% trans 'Web Page' %}
+                            Web Page
                         </h3>
                     </div>
                     <div class="panel-body">
@@ -123,7 +137,9 @@
                                         <div class="col-sm-9">
                                             <div class="field-container page-container">
                                                 {{ field }}
-                                                {{ field.errors }}
+                                                <div class="form-group {% if field.errors %}alert alert-danger{% endif %}">
+                                                    {{ field.errors }}
+                                                </div>
                                             </div>
                                         </div>
                                     {% endif %}
@@ -134,10 +150,10 @@
                 </li>
             {% endfor %}
         </ul>
-        <button type="button" class="button add-page btn btn-secondary pull-right">{% trans 'Add Page' %}</button>
+        <button type="button" class="button add-page btn btn-secondary pull-right">Add Page</button>
     </fieldset>
     <fieldset>
-        <legend>{% trans 'Phases' %}</legend>
+        <legend>Phases</legend>
         <ul id="phases" class="list-unstyled">
             {{ Phases.management_form }}
             {{ Phases.non_form_errors }}
@@ -145,7 +161,7 @@
                 <div class="phase panel panel-primary">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            {% trans 'Phase' %}
+                            Phase
                         </h3>
                     </div>
                     <div class="panel-body">
@@ -184,7 +200,7 @@
                 <div class="phase panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            {% trans 'Competition Phase' %}
+                            Competition Phase
                         </h3>
                     </div>
                     <div class="panel-body">
@@ -195,7 +211,7 @@
                                 {% if field.name == "starting_kit_organizer_dataset" %}
                                 <div class="form-group">
                                     <div class="col-sm-9 col-sm-offset-3">
-                                        <p>{% trans 'You can add, remove, and modify datasets in the' %} <a href="{% url 'my_datasets' %}">{% trans 'My Datasets' %}</a> {% trans 'section' %}</p>
+                                        <p>You can add, remove, and modify datasets in the <a href="{% url 'my_datasets' %}">My Datasets</a> section</p>
                                     </div>
                                 </div>
                                 {% endif %}
@@ -230,7 +246,7 @@
                 </li>
             {% endfor %}
         </ul>
-        <button type="button" class="medium blue button add-phase btn btn-secondary pull-right">{% trans 'Add Phase' %}</button>
+{#        <button type="button" class="medium blue button add-phase btn btn-secondary pull-right">Add Phase</button>#}
     </fieldset>
 
     <fieldset>
@@ -244,7 +260,7 @@
                 <div class="leaderboard panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            {% trans 'Leaderboard' %}
+                            Leaderboard
                         </h3>
                     </div>
                     <div class="panel-body">
@@ -286,10 +302,24 @@
     <hr />
     <div class="row">
         <div class="col-sm-4 col-sm-offset-4">
-            <button type="submit" class="medium button blue btn btn-primary btn-block">{% trans 'Submit' %}</button>
+            <button type="submit" class="medium button blue btn btn-primary btn-block">Submit</button>
         </div>
     </div>
 </form>
+
+<style>
+    .alert-danger {
+        width: 100%;
+        margin-top: 0.5em;
+        margin-left: 0 !important;
+        margin-bottom: -5px;
+    }
+
+    .errorlist {
+        list-style-type: none;
+        text-align: left;
+    }
+</style>
 {% endblock content %}
 
 {% block jsincludes %}
@@ -300,7 +330,16 @@
 <script type="text/javascript">
 {% block js %}
 $('document').ready(function () {
-    $("#id_admins").select2();
+    $("#id_admins").select2({
+        width: "100%",
+        dropdownAutoWidth: true,
+        ajax: {
+            url: '/user_lookup/',
+            delay: 250
+        },
+        cache: true,
+        minimumInputLength: 1
+    });
 
     tinyMCE.init({
         theme : "advanced",
@@ -423,6 +462,16 @@ $('document').ready(function () {
             }
         };
     });
+
+    var toggle_url_redirect_disable = function() {
+        if ($('input#id_has_registration')[0].checked){
+            $('input#id_url_redirect').attr("disabled", "disabled")
+        }else{
+            $('input#id_url_redirect').removeAttr("disabled", "disabled")
+        }
+    };
+    toggle_url_redirect_disable();
+    $('input#id_has_registration').on('click', toggle_url_redirect_disable);
   });
 {% endblock js %}
 </script>

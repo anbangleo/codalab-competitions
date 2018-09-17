@@ -1,4 +1,3 @@
-{% load i18n %}
 {% load url from future %}
 {% load account %}
 {% load analytical %}
@@ -18,7 +17,7 @@
     {% block meta %}
     {% endblock %}
 
-    <title>BuaaDataLab - {% block head_title %}{% endblock %}</title>
+    <title>CodaLab - {% block head_title %}{% endblock %}</title>
 
     {% block css %}
         <!-- Included CSS Files (Compressed) -->
@@ -62,7 +61,7 @@
         <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar_collapse">
-                    <span class="sr-only">{% trans 'Toggle navigation'%}</span>
+                    <span class="sr-only">Toggle navigation</span>
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
@@ -90,23 +89,23 @@
                           <li class="{% active request '/my/' %}">
                               {% if SINGLE_COMPETITION_VIEW_PK %}
                                   {% if request.user.is_superuser or request.user.is_staff %}
-                                      <a href="/my">{% trans 'My Competitions'%}</a>
+                                      <a href="/my">My Competitions</a>
                                   {% endif %}
                               {% else %}
                                   {% if user.is_authenticated %}
-                                      <a href="/my">{% trans 'My Competitions'%}</a>
+                                      <a href="/my">My Competitions</a>
                                   {% else %}
-                                      <a href="/competitions/">{% trans 'Search Competitions'%}</a>
+                                      <a href="/competitions/">Search Competitions</a>
                                   {% endif %}
                               {% endif %}
                           </li>
                           <li class="{% active request '/my/' %}">
                           {% if not user.is_authenticated %}
-                          <a href="{% url 'account_login' %}?next={{request.path}}" target="_self">{% trans 'My Competitions'%}</a>
+                          <a href="{% url 'account_login' %}?next={{request.path}}" target="_self">My Competitions</a>
                           {% endif %}
                           </li>
                         <li>
-                            <a href="{% url 'competitions:docs' %}" target="_blank">{% trans 'Help'%}</a>
+                            <a href="https://github.com/codalab/codalab-competitions/wiki" target="_blank">Help</a>
                         </li>
                         {% if user.is_authenticated %}
                             <li class="dropdown {% active request '/accounts/' %}">
@@ -115,28 +114,26 @@
                                 </a>
                                 <ul class="dropdown-menu" role="menu">
                                     {% if user.is_superuser %}
-                                        <li><a href="{% url 'admin_monitoring_links' %}">{% trans 'Admin Monitoring Links'%}</a></li>
+                                        <li><a href="{% url 'admin_monitoring_links' %}">Admin Monitoring Links</a></li>
                                         <li class="divider"></li>
-                                        <li><a href="{% url 'customize_codalab' %}">{% trans 'Customize Codalab'%}</a></li>
+                                        <li><a href="{% url 'customize_codalab' %}">Customize Codalab</a></li>
                                         <li class="divider"></li>
                                         <li><a href="{% url 'su-login' %}">Switch User</a></li>
                                         <li class="divider"></li>
                                     {% endif %}
-                                    <li><a href="{% url 'user_settings' %}">{% trans 'Settings'%}</a></li>
+                                    <li><a href="{% url 'user_settings' %}">Settings</a></li>
                                     <li class="divider"></li>
-                                    <li><a href="{% url 'queues:list' %}">{% trans 'Worker Queue Management'%}</a></li>
+                                    <li><a href="/accounts/password/reset/" target="_self">Change Password</a></li>
                                     <li class="divider"></li>
-                                    <li><a href="/accounts/password/reset/" target="_self">{% trans 'Change Password'%}</a></li>
-                                    <li class="divider"></li>
-                                    <li><a href="{% url 'account_logout' %}" target="_self">{% trans 'Sign Out'%}</a></li>
+                                    <li><a href="{% url 'account_logout' %}" target="_self">Sign Out</a></li>
                                 </ul>
                             </li>
                         {% else %}
                             <li>
-                                <a href="{% url 'account_signup' %}?next={{request.path}}" target="_self">{% trans 'Sign Up'%}</a>
+                                <a href="{% url 'account_signup' %}?next={{request.path}}" target="_self">Sign Up</a>
                             </li>
                             <li>
-                                <a href="{% url 'account_login' %}?next={{request.path}}" target="_self">{% trans 'Sign In'%}</a>
+                                <a href="{% url 'account_login' %}?next={{request.path}}" target="_self">Sign In</a>
                             </li>
                         {% endif %}
                     </ul>
@@ -168,13 +165,13 @@
     <footer class="navbar-fixed-bottom">
         <div class="container-fluid">
             <ul class="nav navbar-nav navbar-right">
-                <!--<li><a href="https://github.com/codalab/codalab/issues" target="_blank">{% trans 'Join us on Github for contact & bug reports'%}</a></li>-->
-                <!--{% if SINGLE_COMPETITION_VIEW_PK %}-->
-                    <!--<li><a href="http://codalab.org/" target="_blank">{% trans 'Powered by Codalab'%}</a></li>-->
-                <!--{% else %}-->
-                    <li><a href="http://www.nlsde.buaa.edu.cn/sysgk/sysjj.htm" target="_blank">{% trans 'About'%}</a></li>
-                    <!--<li><a href="https://github.com/codalab/codalab/wiki/Privacy" target="_blank">{% trans 'Privacy and Terms'%}</a></li>-->
-                <!--{% endif %}-->
+                <li><a href="https://github.com/codalab/codalab/issues" target="_blank">Join us on Github for contact & bug reports</a></li>
+                {% if SINGLE_COMPETITION_VIEW_PK %}
+                    <li><a href="http://codalab.org/" target="_blank">Powered by Codalab</a></li>
+                {% else %}
+                    <li><a href="https://github.com/codalab/codalab/wiki/Project_About_CodaLab" target="_blank">About</a></li>
+                    <li><a href="https://github.com/codalab/codalab/wiki/Privacy" target="_blank">Privacy and Terms</a></li>
+                {% endif %}
 
                 <li><a>v{{ CODALAB_VERSION }}</a></li>
             </ul>
@@ -200,6 +197,34 @@
 {#        <script src="{{ STATIC_URL }}codalab.min.js"></script>#}
 {#    {% endif %}#}
 
+
+    <div id="migration_modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Migration warning</h4>
+                </div>
+                <div class="modal-body">
+                    <p>We have scheduled a important maintenance operation for the Codalab public instance (<a href="http://competitions.codalab.org">http://competitions.codalab.org</a>) for Saturday, September 8th.</p>
+
+                    <p>The migration will start at approximately 9AM PST and should hopefully be completed by approximately 1PM PST that same day.
+                        During that time the server will be down.</p>
+
+                    <p>If you have a scheduling conflict with this move, please let us know before September
+                        1st by posting an issue to GitHub here:</br>
+                        <a href="https://github.com/codalab/codalab-competitions/issues">https://github.com/codalab/codalab-competitions/issues</a></p>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button id="hide_migration_warning" type="button" class="btn btn-primary" data-dismiss="modal" onclick="hide_migration_warning">OK don't tell me again!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="text/javascript">
 
     //GOOGLE ANALYTICS SNIPPET
@@ -222,7 +247,18 @@
             is_authenticated: {{ user.is_authenticated|yesno:"true,false" }},
         }
 
+        /*
+         * If we want to do a migration again, can use this warning!
+        $(document).ready(function() {
+            var migration_warning = localStorage.getItem('migration_warning')
+            if(migration_warning === null) {
+                $("#migration_modal").modal('show')
+            }
 
+            $("#hide_migration_warning").click(function() {
+                localStorage.setItem('migration_warning', true)
+            })
+        })*/
     </script>
     {% block jsincludes %}
 

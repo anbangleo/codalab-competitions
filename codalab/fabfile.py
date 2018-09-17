@@ -51,16 +51,31 @@ def hosts(key):
 def compute_worker_init(BROKER_URL, BROKER_USE_SSL=False):
     """Initializes compute worker by installing docker and the compute worker image
 
-    Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_initialize:url,True
+    Meant to be used with `hosts` like so, for an SSL'd server:
+        fab hosts:prod compute_worker_init:pyamqp://blahblah/,True
     """
     # Get proper SSL flag value
     BROKER_USE_SSL = bool(BROKER_USE_SSL)
 
     # Make .env file settings for worker
     env_file = 'BROKER_URL={}'.format(BROKER_URL)
+
     if BROKER_USE_SSL:
         env_file += "\nBROKER_USE_SSL=True"
+
+    # Custom hostname?
+    host_group_name = env['tasks'][0].split(':')[1]
+
+    config = yaml.load(open('server_config.yaml').read())
+
+    # if the configuration has an entry for custom hostnames, add them to the server
+    if 'hostnames' in config[host_group_name]:
+        host_name_index = env['hosts'].index(env['host_string'])
+        hostname = config[host_group_name]['hostnames'][host_name_index]
+    else:
+        hostname = env['host_string']
+    env_file += "\nCODALAB_HOSTNAME={}".format(hostname)
+
     run('echo "{}" > .env'.format(env_file))
 
     # Install docker
@@ -75,7 +90,7 @@ def compute_worker_update():
     """Updates compute workers to latest docker image
 
     Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_update
+        fab hosts:prod compute_worker_update
     """
     compute_worker_kill()
     run('docker pull codalab/competitions-v1-compute-worker:latest')
@@ -83,11 +98,20 @@ def compute_worker_update():
     compute_worker_run()
 
 
+def compute_worker_update_docker():
+    """Updates base docker installation version to latest
+
+    Meant to be used with `hosts` like so:
+        fab hosts:prod compute_worker_update_docker
+    """
+    run('curl https://get.docker.com | sudo sh')
+
+
 def compute_worker_docker_restart():
     """Restarts docker
 
     Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_docker_restart
+        fab hosts:prod compute_worker_docker_restart
     """
     # sudo('/etc/init.d/docker restart')
 
@@ -99,7 +123,7 @@ def compute_worker_kill():
     """Kills compute worker
 
     Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_kill
+        fab hosts:prod compute_worker_kill
     """
     with warn_only():
         # Error if compute_worker isn't already running
@@ -109,11 +133,15 @@ def compute_worker_kill():
         run('docker rm -f $(docker ps -a -q)')
 
 
+def compute_worker_prune():
+    run('docker system prune -af')
+
+
 def compute_worker_restart():
     """Restarts compute worker
 
     Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_restart
+        fab hosts:prod compute_worker_restart
     """
     compute_worker_kill()
     compute_worker_run()
@@ -123,14 +151,16 @@ def compute_worker_run():
     """Runs the actual compute worker.
 
     Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_run
+        fab hosts:prod compute_worker_run
     """
     run("docker run "
         "--env-file .env "
         "-v /var/run/docker.sock:/var/run/docker.sock "
         "-v /tmp/codalab:/tmp/codalab "
         "-d --restart unless-stopped "
-        "--name compute_worker -- "
+        "--name compute_worker "
+        "--log-opt max-size=50m "
+        "--log-opt max-file=3 -- "
         "codalab/competitions-v1-compute-worker:latest")
 
 
@@ -138,7 +168,7 @@ def compute_worker_status():
     """Prints out `docker ps` for each worker
 
     Meant to be used with `hosts` like so:
-        fab hosts:prod_workers compute_worker_status
+        fab hosts:prod compute_worker_status
     """
     run('docker ps -a')
 

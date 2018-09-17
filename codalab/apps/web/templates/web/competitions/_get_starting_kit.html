@@ -1,20 +1,17 @@
 {% load codalab_tags %}
-{% load i18n %}
+
 {#<h1>Files</h1>#}
 {% if competition.has_starting_kit_or_public_data %}
     <table style="border: 1px solid rgba(0,0,0,0.3)" class="table table-responsive">
         <thead>
         <th>
-            {% trans 'Download' %}
+            Download
         </th>
         <th>
-            {% trans 'Size (mb)' %}
+            Size (mb)
         </th>
         <th>
-            {% trans 'Filetype:' %}
-        </th>
-        <th>
-            {% trans 'Phase' %}
+            Phase
         </th>
         </thead>
         <tbody>
@@ -23,13 +20,10 @@
                 <tr>
                     <td>
                         <a href="{% url 'datasets_download' dataset_key=phase.starting_kit_organizer_dataset.key %}"
-                           class="btn btn-primary phase-btn-{{ phase.color }}">{{ phase.label }}</a>
+                           class="btn btn-primary phase-btn-{{ phase.color }}">{{ phase.starting_kit_organizer_dataset.type }}</a>
                     </td>
                     <td style="padding-top: 12px;">
                         {{ phase.get_starting_kit_size_mb|floatformat:3 }}
-                    </td>
-                    <td style="padding-top: 12px;">
-                        {{ phase.starting_kit_organizer_dataset.type }}
                     </td>
                     <td style="padding-top: 12px;">
                         #{{ phase.phasenumber }} {{ phase.label }}
@@ -40,13 +34,10 @@
                 <tr>
                     <td>
                         <a href="{% url 'datasets_download' dataset_key=phase.public_data_organizer_dataset.key %}"
-                           class="btn btn-primary phase-btn-{{ phase.color }}">{{ phase.label }}</a>
+                           class="btn btn-primary phase-btn-{{ phase.color }}">{{ phase.public_data_organizer_dataset.type }}</a>
                     </td>
                     <td style="padding-top: 12px;">
                         {{ phase.get_public_data_size_mb|floatformat:3 }}
-                    </td>
-                    <td style="padding-top: 12px;">
-                        {{ phase.public_data_organizer_dataset.type }}
                     </td>
                     <td style="padding-top: 12px;">
                         #{{ phase.phasenumber }} {{ phase.label }}
@@ -57,5 +48,5 @@
         </tbody>
     </table>
 {% else %}
-    <i>{% trans 'No files have been added for this competition yet.' %}</i>
+    <i>No files have been added for this competition yet.</i>
 {% endif %}

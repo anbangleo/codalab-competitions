@@ -39,6 +39,7 @@
     </a>
     <a href="{% url 'my_competition_submissions' competition_id=competition.pk %}" class="btn btn-primary">{% trans 'Submissions' %}</a>
     <a href="{% url 'competitions:dumps' competition_pk=competition.pk %}" class="btn btn-primary">{% trans 'Dumps' %}</a>
+    <a href="{% url 'competitions:widgets' pk=competition.pk %}" class="btn btn-primary">{% trans 'Widgets' %}</a>
     <hr>
 {% endif %}
 <div class="competition-view">
@@ -146,7 +147,7 @@
                     {% if competition.enable_wechar_records %}
                     <li><a href="{% url 'wechat_records' forum_pk=competition.forum.pk %}">{% trans 'Chat Records' %} </a></li>
                     {% endif %}
-                    {% if competition.enable_teams %}
+                    {% if competition.enable_teams and not competition.allow_organizer_teams %}
                         {% if my_status == "approved" %}
                             <li> 
                                 <a href="{% url 'team_detail' competition_pk=competition.pk %}">{% trans 'Team' %}

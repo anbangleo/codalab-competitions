@@ -290,10 +290,10 @@ This code is for 768px and up
    font-size: 14px;
    color: #33aa33;
 }
-.submission_description{
-  pre{
+
+// Stop errors/etc. from overflowing divs
+pre{
     white-space: pre-wrap;
-  }
 }
 
 body textarea {
@@ -327,4 +327,12 @@ starting_kit_td {
 
 starting_kit_table {
     border: 1px solid #000000;
+}
+
+.finished-submission {
+    background-color: rgba(0, 255, 0, 0.1) !important;
+}
+
+.failed-submission {
+    background-color: rgba(255, 0, 0, 0.1) !important;
 }

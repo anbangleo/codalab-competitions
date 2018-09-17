@@ -10,10 +10,13 @@
             <a href="#health">Health</a>
         </h1>
         </p>
+        <p>
+            <a href="{% url "health_status_simple" %}">View simple status</a>
+        </p>
         <div class="content" data-slug="health" data-section-content>
             <div class="row">
                 <div class="col-sm-4">
-                    <canvas class="meter" data-value="{{ jobs_pending_count }}" data-max="500"></canvas>
+                    <canvas class="meter" data-value="{{ jobs_pending_count }}" data-max="150"></canvas>
                     <p>Jobs pending: {{ jobs_pending_count }}</p>
 
                     <canvas class="meter" data-value="{{ jobs_finished_in_last_2_days_avg }}" data-max="600"></canvas>
@@ -122,18 +125,12 @@
 
             <div id="jobs_pending_stuck" class="collapse well">
                 <strong>Pending jobs older than one day</strong>
-<<<<<<< HEAD
                 <strong>Count: {{ jobs_pending_stuck_count }}</strong>
-=======
->>>>>>> develop
                 {% include "health/_job_table.html" with jobs_list=jobs_pending_stuck %}
             </div>
             <div id="jobs_running_stuck" class="collapse well">
                 <strong>Running jobs older than one day</strong>
-<<<<<<< HEAD
                 <strong>Count: {{ jobs_running_stuck_count }}</strong>
-=======
->>>>>>> develop
                 {% include "health/_job_table.html" with jobs_list=jobs_running_stuck %}
             </div>
         </div>

@@ -89,27 +89,21 @@ def get_allowed_teams(user,competition):
     return get_competition_teams(competition)
 
 
-def get_user_team(user, competition):
-    team = get_competition_user_teams(competition, user)
-
-    if team is not None:
-        return team
-
-    user_requests = get_user_requests(user, competition)
-    user_team = user_requests.filter(status=TeamMembershipStatus.objects.get(codename="approved")).all()
-    if len(user_team) == 0:
-        user_team = None
-
-    if user_team is not None:
-        for req in user_team:
-            if req.is_active:
-                team = req
-
-    if team is not None:
-        team = team.team
-
-    return team
-
+# def get_user_team(user, competition):
+def get_user_team(participant, competition):
+    # This function just gets user's created teams that are approved
+    # and returns the first one or None
+    user_created_teams = Team.objects.filter(competition=competition, creator=participant.user, status__codename='approved').select_related('status')
+    # If we have user created teams
+    if user_created_teams is not None and len(user_created_teams) > 0:
+        return user_created_teams[0]
+    else:
+        # Else if no user created teams
+        user_approved_team_memberships = list(participant.user.team_memberships.filter(status__codename='approved').select_related('team', 'status'))
+        user_approved_active_teams = [membership for membership in user_approved_team_memberships if membership.is_active]
+        if user_approved_active_teams is not None and len(user_approved_active_teams) > 0:
+            return user_approved_active_teams[0].team
+    return None
 
 def get_team_submissions(team, phase=None):
     if phase is None:
@@ -194,14 +188,14 @@ class Team(models.Model):
     def __unicode__(self):
         return "[%s] %s - %s" % (self.status.codename, self.competition.title, self.name)
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=False, blank=False)
     competition = models.ForeignKey('web.Competition')
     description = models.TextField(null=True, blank=True)
     image = models.FileField(upload_to='team_logo', storage=PublicStorage, null=True, blank=True, verbose_name="Logo")
     image_url_base = models.CharField(max_length=255)
     allow_requests = models.BooleanField(default=True, verbose_name="Allow requests")
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='team_creator')
-    members = models.ManyToManyField(settings.AUTH_USER_MODEL, through='TeamMembership', blank=True, null=True)
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, through='TeamMembership', blank=True, null=True, related_name='teams')
     created_at = models.DateTimeField(null=True, auto_now_add=True)
     last_modified = models.DateTimeField(auto_now_add=True)
     status = models.ForeignKey(TeamStatus, null=True)
@@ -283,8 +277,30 @@ class TeamMembershipStatus(models.Model):
 
 
 class TeamMembership(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='team_memberships')
+    team = models.ForeignKey(Team)
+    is_invitation = models.BooleanField(default=False)
+    is_request = models.BooleanField(default=False)
+    start_date = models.DateTimeField(null=True, blank=True, verbose_name="Start Date (UTC)")
+    end_date = models.DateTimeField(null=True, blank=True, verbose_name="End Date (UTC)")
+    message = models.TextField(null=True, blank=True)
+    status = models.ForeignKey(TeamMembershipStatus, null=True)
+    reason = models.CharField(max_length=100,null=True,blank=True)
+
     def __unicode__(self):
         return "%s - %s" % (self.team_id, self.user_id)
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        other_memberships = TeamMembership.objects.filter(user=self.user, team__competition=self.team.competition).exclude(pk=self.pk)
+        if len(other_memberships) != 0:
+            print("Removing user: {0} from other memberships in competition: {1}".format(self.user, self.team.competition))
+            other_memberships.delete()
+        super(TeamMembership, self).save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields
+        )
 
     @property
     def is_active(self):
@@ -294,7 +310,6 @@ class TeamMembership(models.Model):
             return False
 
         return True
-
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     team = models.ForeignKey(Team)
     is_invitation = models.BooleanField(default=False)
@@ -304,3 +319,4 @@ class TeamMembership(models.Model):
     message = models.TextField(null=True, blank=True)
     status = models.ForeignKey(TeamMembershipStatus, null=True)
     reason = models.CharField(max_length=100,null=True,blank=True)
+

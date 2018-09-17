@@ -3,6 +3,7 @@ import re
 import uuid
 
 from datetime import timedelta
+from distutils.util import strtobool
 from textwrap import dedent
 
 from configurations import importer
@@ -290,6 +291,7 @@ class Base(Settings):
     ACCOUNT_USERNAME_REQUIRED = True
     ACCOUNT_EMAIL_VERIFICATION = os.environ.get('ACCOUNT_EMAIL_VERIFICATION', 'mandatory')
     ACCOUNT_SIGNUP_FORM_CLASS = 'apps.authenz.forms.CodalabSignupForm'
+    ACCOUNT_LOGOUT_ON_GET = True
 
     # Django Analytical configuration
     # GOOGLE_ANALYTICS_PROPERTY_ID = 'UA-42847758-2'
@@ -335,22 +337,19 @@ class Base(Settings):
     # =========================================================================
     # Caching
     # =========================================================================
-    try:
-        # Don't force people to install/use this
-        import memcached
-
-        MEMCACHED_PORT = os.environ.get('MEMCACHED_PORT', 11211)
-        CACHES = {
-            'default': {
-                'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-                'LOCATION': 'memcached:{}'.format(MEMCACHED_PORT),
-            }
+    MEMCACHED_PORT = os.environ.get('MEMCACHED_PORT', 11211)
+    CACHES = {
+        'default': {
+            # 'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+            'BACKEND': 'django.core.cache.backends.memcached.PyLibMCCache',
+            'LOCATION': 'memcached:{}'.format(MEMCACHED_PORT),
         }
+    }
 
-        # Store information for celery
-        CELERY_RESULT_BACKEND = 'cache+memcached://memcached:{}/'.format(MEMCACHED_PORT)
-    except ImportError:
-        pass
+    # Store information for celery
+    CELERY_RESULT_BACKEND = 'cache+memcached://memcached:{}/'.format(MEMCACHED_PORT)
+
+    SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 
     # =========================================================================
@@ -379,6 +378,7 @@ class Base(Settings):
     AWS_STORAGE_PRIVATE_BUCKET_NAME = os.environ.get('AWS_STORAGE_PRIVATE_BUCKET_NAME')
     AWS_S3_CALLING_FORMAT = os.environ.get('AWS_S3_CALLING_FORMAT', 'boto.s3.connection.OrdinaryCallingFormat')
     AWS_S3_HOST = os.environ.get('AWS_S3_HOST', 's3-us-west-2.amazonaws.com')
+    AWS_S3_SECURE_URLS = strtobool(os.environ.get('AWS_S3_SECURE_URLS', "True"))
     AWS_QUERYSTRING_AUTH = os.environ.get(
         # This stops signature/auths from appearing in saved URLs
         'AWS_QUERYSTRING_AUTH',
@@ -394,6 +394,7 @@ class Base(Settings):
     BUNDLE_AZURE_ACCOUNT_NAME = os.environ.get('BUNDLE_AZURE_ACCOUNT_NAME', AZURE_ACCOUNT_NAME)
     BUNDLE_AZURE_ACCOUNT_KEY = os.environ.get('BUNDLE_AZURE_ACCOUNT_KEY', AZURE_ACCOUNT_KEY)
     BUNDLE_AZURE_CONTAINER = os.environ.get('BUNDLE_AZURE_CONTAINER', 'bundles')
+    AZURE_BLOB_SERVICE_HOST_BASE = os.environ.get('AZURE_BLOB_SERVICE_HOST_BASE')
 
 
     # =========================================================================
@@ -424,6 +425,11 @@ class Base(Settings):
     RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'rabbit')
     RABBITMQ_PORT = os.environ.get('RABBITMQ_PORT', '5672')
     RABBITMQ_MANAGEMENT_PORT = os.environ.get('RABBITMQ_MANAGEMENT_PORT', '15672')
+
+    if DEBUG and SSL_CERTIFICATE:
+        # To make RABBITMQ api calls work locally over SSL we need this set for requests
+        # to recognize our cert
+        os.environ.setdefault('REQUESTS_CA_BUNDLE', SSL_CERTIFICATE)
 
 
     # =========================================================================
@@ -468,6 +474,9 @@ class Base(Settings):
     # or via ENV vars here.
     SINGLE_COMPETITION_VIEW_PK = os.environ.get('SINGLE_COMPETITION_VIEW_PK')
     CUSTOM_HEADER_LOGO = os.environ.get('CUSTOM_HEADER_LOGO')
+
+    # NOTE! The above values are secondarily controlled via Configuration model objects,
+    # which take precedence over these Env vars
 
 
     # =========================================================================
@@ -651,11 +660,6 @@ class DevBase(Base):
             'debug_toolbar',
         )
         ACCOUNT_EMAIL_VERIFICATION = None
-        CACHES = {
-            'default': {
-                'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-            }
-        }
         EXTRA_MIDDLEWARE_CLASSES = (
             'debug_toolbar.middleware.DebugToolbarMiddleware',
         )
