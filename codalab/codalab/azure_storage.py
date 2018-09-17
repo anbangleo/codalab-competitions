@@ -98,11 +98,11 @@ class AzureStorage(Storage):
         return name
 
     def url(self, name):
-<<<<<<< HEAD
-	return "http://contest.mooc.buaa.edu.cn/azurite/%s/%s" % (self.azure_container, name)
-=======
-        return "https://%s%s/%s/%s" % (self.account_name, settings.AZURE_BLOB_SERVICE_HOST_BASE or azure.BLOB_SERVICE_HOST_BASE, self.azure_container, name)
->>>>>>> 77678da56674371f86c58ddb4c0385e13086827c
+
+	    return "http://contest.mooc.buaa.edu.cn/azurite/%s/%s" % (self.azure_container, name)
+
+        # return "https://%s%s/%s/%s" % (self.account_name, settings.AZURE_BLOB_SERVICE_HOST_BASE or azure.BLOB_SERVICE_HOST_BASE, self.azure_container, name)
+
 
     def properties(self, name):
         return self.connection.get_blob_properties(
