@@ -57,7 +57,10 @@ from dealwordindict import read_vocab, read_category, batch_iter, process_file, 
 import time
 from datetime import timedelta
 import heapq
-from rnnmodel import RNN_Probability_Model, TRNNConfig
+from rnnmodel import RNN_Probability_Model
+from rnn_model_config import TRNNConfig
+from cnnmodel import CNN_Probability_Model
+from cnn_model_config import TCNNConfig
 import random
 import codecs
 
@@ -141,7 +144,7 @@ class BinaryClassTest(object):
         # 处理train
         data_id_train, label_id_train = process_file_rnn(train_dir, word_to_id, cat_to_id, 0,  wordslength)
         data_id_test, label_id_test = process_file_rnn(test_dir, word_to_id, cat_to_id, 0,  wordslength)
-        data_id_unlabel, label_id_unlabel, unlabelnames = process_file_rnn(unlabel_dir, word_to_id, cat_to_id, 1,  wordslength)
+        data_id_unlabel, label_id_unlabel, unlabelcontents, unlabelnames = process_file_rnn(unlabel_dir, word_to_id, cat_to_id, 1,  wordslength)
 
         # 处理train
         y_train_temp = kr.utils.to_categorical(label_id_train, num_classes=len(cat_to_id))
@@ -159,7 +162,7 @@ class BinaryClassTest(object):
         Y_unlabel = np.array(label_id_unlabel)
 
         # 将test集拆分成test 和val
-        X_test, X_val, Y_test, Y_val = train_test_split(X_test_temp, Y_test_temp, test_size=0.8)
+        X_test, X_val, Y_test, Y_val = train_test_split(X_test_temp, Y_test_temp, test_size=0.2)
 
         # [TODO]将unlabel集label打为NONE同时与Train拼接
         trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len (Y_unlabel)]))
@@ -167,7 +170,7 @@ class BinaryClassTest(object):
         tst_ds = Dataset(X_test, Y_test)
 
         draw_ds = Dataset(np.concatenate([X_train, X_test, X_val]), np.concatenate([Y_train, [NONE] * (len(Y_test) + len(Y_val))]))
-        return trn_ds, val_ds, tst_ds, draw_ds, unlabelnames
+        return trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames
 
         # [TODO]将普通AL 从DAL中拆分出来并生成特定的函数 > DONE
 
@@ -550,9 +553,6 @@ class BinaryClassTest(object):
                                                   uniform_sampler=True,
                                                   model=LogisticRegression()
                                                   )
-        elif algorithm == 'dal':
-            pass
-            #  [todo] add dal
         else:
             pass
 
@@ -583,13 +583,27 @@ class BinaryClassTest(object):
                                                   uniform_sampler=True,
                                                   model=SVM(kernel='linear', decision_function_shape='ovr')
                                                   )
-        elif algorithm == 'dal':
-            pass
-            # [todo] add dal
         else:
             pass
 
         return qs, qs_fordraw
+
+    def DeepActiveLearning(self, algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize):
+        if algorithm == 'cnn':
+            modelcnn = CNN_Probability_Model(vocab_dir, wordslength, batchsize, numclass, categories_class)
+            modelcnn.train(trn_ds, val_ds)
+            test_acc = modelcnn.test(val_ds)
+            E_out, E_time = runcnn(trn_ds, tst_ds, val_ds, lbr, modelcnn, quota, test_acc, batchsize)
+        elif algorithm == 'rnn':
+            modelrnn = RNN_Probability_Model(vocab_dir, wordslength, batchsize, numclass, categories_class)
+            modelrnn.train(trn_ds, val_ds)
+            # test_acc = 0.5
+            test_acc = modelrnn.test(val_ds)
+            E_out, E_time = runrnn(trn_ds, tst_ds, val_ds, lbr, modelrnn, quota, test_acc, batchsize)
+        else:
+            pass
+
+        return E_out
 
     def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, batchsize, pushallask,docfile,username,useremail,bmtpassword):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
@@ -668,6 +682,8 @@ class BinaryClassTest(object):
                 model = SVM(kernel='rbf', decision_function_shape='ovr')
                 E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
                 E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
+            elif modelselect == 'dal':
+                pass
             else:
                 pass
 
@@ -679,6 +695,8 @@ class BinaryClassTest(object):
                 E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
                 E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
                 # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
+            elif modelselect == 'dal':
+                pass
             else:
                 pass
 

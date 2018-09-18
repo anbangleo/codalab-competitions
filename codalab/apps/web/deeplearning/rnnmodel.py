@@ -28,7 +28,7 @@ from datetime import timedelta
 import tensorflow as tf
 import tensorflow.contrib.keras as kr
 
-from rnn_model import TRNNConfig, TextRNN, TRNNConfigLSTM
+from rnn_model_config import TRNNConfig, TextRNN, TRNNConfigLSTM
 #from active.merge_al_rnn.rnn_model import TRNNConfig, TextRNN
 # from .cnews_loader import read_category, read_vocab
 from sklearn.metrics import accuracy_score
