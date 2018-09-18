@@ -141,10 +141,10 @@ def to_words(content, words):
     """将id表示的内容转换为文字"""
     return ''.join(words[x] for x in content)
 
-# def process_al_file(dataset, word_to_id,cat_to_id,max_length=600):
+# def process_al_file(data, word_to_id,cat_to_id,max_length=600):
 #     labels,contents = zip(*dataset.format_sklearn())
 #     data_id, label_id = [], []
-#
+#set
 #
 #     for line in contents:
 #         try:

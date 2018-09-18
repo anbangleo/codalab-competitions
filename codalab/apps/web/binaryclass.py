@@ -132,6 +132,81 @@ class BinaryClassTest(object):
 
         #返回训练集，训练集的个数，未标记数据的名称list
         return trn_ds, numoftrain, unlabel_name, real_trn_ds
+        data_id, label_id = process_file_rnn(train_dir, word_to_id, cat_to_id, wordslength)
+        data_id_test, label_id_test = process_file_rnn(test_dir, word_to_id, cat_to_id, 0, wordslength)
+        data_id_unlabel, label_id_unlabel, unlabelcontents, unlabelnames = process_file_rnn(unlabel_dir, word_to_id,
+                                                                                            cat_to_id, 1, wordslength)
+
+
+    def split_train_test_dal(self,train_dir, test_dir, vocab_dir, vocab_size, n_labeled, wordslength):
+        if not os.path.exists(vocab_dir):
+            build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
+
+        # train, test, unlabel通用
+        categories, cat_to_id = read_category(train_dir)
+        words, word_to_id = read_vocab(vocab_dir)
+
+        data_id_train, label_id_train = process_file_rnn(train_dir, word_to_id, cat_to_id, wordslength)
+        data_id_test, label_id_test = process_file_rnn(test_dir, word_to_id, cat_to_id, wordslength)
+        # x_rnn, y_rnn = process_file_rnn(train_dir, word_to_id, cat_to_id, 600)
+        data_id_train.extend(data_id_test)
+        label_id_train.extend(label_id_test)
+        y = kr.utils.to_categorical(label_id_train, num_classes=len(cat_to_id))
+        listy = self.convertlabel(y)
+
+        X_train, X_test, y_train, y_test = \
+            train_test_split(data_id_train, listy, test_size=0.2)
+
+        X_train_al = []
+        X_test_al = []
+        res = []
+        for i in X_train:
+            for j in range(wordslength):
+                a = i.count(j)
+                if a > 0:
+                    res.append(a)
+                else:
+                    res.append(0)
+            X_train_al.append(res)
+            res = []
+
+        for i in X_test:
+            for j in range(wordslength):
+                a = i.count(j)
+                if a > 0:
+                    res.append(a)
+                else:
+                    res.append(0)
+            X_test_al.append(res)
+            res = []
+
+        X_train_al = np.array(X_train_al)
+        X_test_al = np.array(X_test_al)
+
+
+        trn_ds_al = Dataset(X_train_al, np.concatenate(
+            [y_train[:n_labeled], [None] * (len(y_train) - n_labeled)]))
+
+        tst_ds_al = Dataset(X_test_al, y_test)
+
+        X_train_rnn = kr.preprocessing.sequence.pad_sequences(X_train, wordslength)
+        X_test_rnn = kr.preprocessing.sequence.pad_sequences(X_test, wordslength)
+
+        X_train_rnn, X_val_rnn, y_train_rnn, y_val_rnn = \
+            train_test_split(X_train_rnn, y_train, test_size=0.2)
+
+        trn_ds_rnn = Dataset(X_train_rnn, np.concatenate(
+            [y_train_rnn[:n_labeled], [None] * (len(y_train_rnn) - n_labeled)]))
+
+        val_ds_rnn = Dataset(X_val_rnn, y_val_rnn)
+
+        tst_ds_rnn = Dataset(X_test_rnn, y_test)
+
+        fully_labeled_trn_ds_al = Dataset(X_train_al, y_train)
+        fully_labeled_trn_ds_rnn = Dataset(X_train_rnn, y_train_rnn)
+
+        return trn_ds_al, tst_ds_al, y_train_rnn, fully_labeled_trn_ds_al, \
+               trn_ds_rnn, tst_ds_rnn, fully_labeled_trn_ds_rnn, val_ds_rnn
 
     def split_train_test_rnn(self, train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength):
         if not os.path.exists(vocab_dir):
@@ -168,9 +243,7 @@ class BinaryClassTest(object):
         trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len (Y_unlabel)]))
         val_ds = Dataset(X_val, Y_val)
         tst_ds = Dataset(X_test, Y_test)
-
-        draw_ds = Dataset(np.concatenate([X_train, X_test, X_val]), np.concatenate([Y_train, [NONE] * (len(Y_test) + len(Y_val))]))
-        return trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames
+        return trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories, len(categories)
 
         # [TODO]将普通AL 从DAL中拆分出来并生成特定的函数 > DONE
 
@@ -505,6 +578,52 @@ class BinaryClassTest(object):
 
         return E_in, E_out
 
+    def realrun_dal(self, trn_ds, tst_ds, val_ds, lbr, model, quota, best_val, batchsize):
+        E_in, E_out = [], []
+        intern = 0
+        finalnum = 0
+        # start_time = time.time()
+        if quota % batchsize == 0:
+            intern = int(quota / batchsize)
+        else:
+            intern = int(quota / batchsize) + 1
+            finalnum = int(quota % batchsize)
+
+        for t in range(intern):
+            x_first_train = []
+            y_first_train = []
+
+            scores = model.predict_pro(trn_ds)
+
+            unlabeled_entry_ids, X_pool = zip(*trn_ds.get_unlabeled_entries())
+
+            if t == intern - 1 and finalnum != 0:
+                max_n = heapq.nsmallest(finalnum, range(len(scores)), scores.take)
+            else:
+                max_n = heapq.nsmallest(batchsize, range(len(scores)), scores.take)
+
+            X, _ = zip(*trn_ds.data)
+
+            for ask_id in max_n:
+                real_id = unlabeled_entry_ids[ask_id]
+                lb = lbr.label(X[real_id])
+                trn_ds.update(real_id, lb)
+                x_first_train.append(X[real_id])
+                y_first_train.append(lb)
+
+            x_first_train = np.array(x_first_train)
+            y_first_train = np.array(y_first_train)
+
+            first_train = Dataset(x_first_train, y_first_train)
+
+            best_val = model.retrain(trn_ds, val_ds, best_val, first_train)
+
+            # E_in = np.append(E_in, 1 - model.score(trn_ds))
+            E_out = np.append(E_out, 1 - model.score(tst_ds))
+
+        # E_time = get_time_dif(start_time)
+        return E_out
+
     def plotforimage(self, query_num, E_in1, E_in2, E_out1, E_out2, username):
         dir = '/app/codalab/static/img/partpicture/'+username+'/'
         if os.path.isfile(dir + 'compare.png'):
@@ -588,18 +707,18 @@ class BinaryClassTest(object):
 
         return qs, qs_fordraw
 
-    def DeepActiveLearning(self, algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize):
+    def DeepActiveLearning(self, algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize, vocab_dir, wordslength, numclass, categories_class):
         if algorithm == 'cnn':
             modelcnn = CNN_Probability_Model(vocab_dir, wordslength, batchsize, numclass, categories_class)
             modelcnn.train(trn_ds, val_ds)
             test_acc = modelcnn.test(val_ds)
-            E_out, E_time = runcnn(trn_ds, tst_ds, val_ds, lbr, modelcnn, quota, test_acc, batchsize)
+            E_out = self.realrun_dal(trn_ds, tst_ds, val_ds, lbr, modelcnn, quota, test_acc, batchsize)
         elif algorithm == 'rnn':
             modelrnn = RNN_Probability_Model(vocab_dir, wordslength, batchsize, numclass, categories_class)
             modelrnn.train(trn_ds, val_ds)
             # test_acc = 0.5
             test_acc = modelrnn.test(val_ds)
-            E_out, E_time = runrnn(trn_ds, tst_ds, val_ds, lbr, modelrnn, quota, test_acc, batchsize)
+            E_out = self.realrun_dal(trn_ds, tst_ds, val_ds, lbr, modelrnn, quota, test_acc, batchsize)
         else:
             pass
 
@@ -683,7 +802,8 @@ class BinaryClassTest(object):
                 E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
                 E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
             elif modelselect == 'dal':
-                pass
+                trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
+                E_out1 = self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize, vocab_dir, wordslength, numclass, categories_class)
             else:
                 pass
 
@@ -696,7 +816,12 @@ class BinaryClassTest(object):
                 E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
                 # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
             elif modelselect == 'dal':
-                pass
+                # DAL的部分相对复杂，用两个split函数，一个跑图像（与TAL对比）；另一个拼接（Train和Test）
+
+                trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories_class, numclass = self.split_train_test_rnn(
+                    train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
+                E_out1 = self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize, vocab_dir,
+                                                 wordslength, numclass, categories_class)
             else:
                 pass
 
