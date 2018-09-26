@@ -208,7 +208,7 @@ class BinaryClassTest(object):
         return trn_ds_al, tst_ds_al, y_train_rnn, fully_labeled_trn_ds_al, \
                trn_ds_rnn, tst_ds_rnn, fully_labeled_trn_ds_rnn, val_ds_rnn
 
-    def split_train_test_rnn(self, train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength):
+    def split_train_test_rnn(self, train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength):
         if not os.path.exists(vocab_dir):
             build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
 
@@ -229,21 +229,78 @@ class BinaryClassTest(object):
         # 处理test
         y_test_temp = kr.utils.to_categorical(label_id_test, num_classes=len(cat_to_id))
 
-        X_test_temp = kr.preprocessing.sequence.pad_sequences(data_id_test, wordslength)
-        Y_test_temp = self.convertlabel(y_test_temp)
+        X_test = kr.preprocessing.sequence.pad_sequences(data_id_test, wordslength)
+        Y_test = self.convertlabel(y_test_temp)
 
         # 处理 Unlabel
         X_unlabel = kr.preprocessing.sequence.pad_sequences(data_id_unlabel, wordslength)
         Y_unlabel = np.array(label_id_unlabel)
 
         # 将test集拆分成test 和val
-        X_test, X_val, Y_test, Y_val = train_test_split(X_test_temp, Y_test_temp, test_size=0.2)
+        X_test, X_val, Y_test, Y_val = train_test_split(X_test, Y_test, test_size=0.2)
 
-        # [TODO]将unlabel集label打为NONE同时与Train拼接
-        trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len (Y_unlabel)]))
-        val_ds = Dataset(X_val, Y_val)
+        trn_ds = Dataset(X_train, Y_train)
         tst_ds = Dataset(X_test, Y_test)
-        return trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories, len(categories)
+        val_ds = Dataset(X_val, Y_val)
+        #
+        # # [TODO]将unlabel集label打为NONE同时与Train拼接
+        # trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len (Y_unlabel)]))
+        # val_ds = Dataset(X_val, Y_val)
+        # tst_ds = Dataset(X_test, Y_test)
+        # return trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories, len(categories)
+        X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(
+            np.concatenate([X_train, X_test]), np.concatenate([Y_train, Y_test]), test_size=0.3)
+        X_test_fordraw, X_val_fordraw, Y_test_fordraw, Y_val_fordraw = train_test_split(
+            X_test_fordraw, Y_test_fordraw,  test_size=0.3)
+
+        # X_train_fordraw_copy = copy.deepcopy(X_train_fordraw)
+        # Y_train_fordraw_copy = copy.deepcopy(Y_train_fordraw)
+        # 开始处理X_train_fordraw为了画图
+        distinctlabel_train = list(set(Y_train_fordraw))
+        distinctlabel_test = list(set(Y_test_fordraw))
+        numofclasses_train = len(distinctlabel_train)
+        numofclasses_test = len(distinctlabel_test)
+        initcontents = []
+        initlabel = []
+        # initlabel = np.array(initlabel)
+        # initcontents = np.array(initcontents)
+        # [TODO] check the nums equal
+        maxinitnum = (len(X_train_fordraw)/numofclasses_train)/3
+        maxinitnums = maxinitnum
+        for i in distinctlabel_train:
+            for j in range(len(Y_train_fordraw)):
+                if Y_train_fordraw[j] == i:
+                    initcontents.append(X_train_fordraw[j])
+                    initlabel.append(Y_train_fordraw[j])
+
+                    # initcontents = np.append(initcontents, X_train_fordraw[j])
+                    # initlabel = np.append(initlabel, Y_train_fordraw[j])
+                    X_train_fordraw = np.delete(X_train_fordraw, j, axis=0)
+                    Y_train_fordraw = np.delete(Y_train_fordraw, j, axis=0)
+                    maxinitnums = maxinitnums - 1
+                    if maxinitnums == 0:
+                        maxinitnums = maxinitnum
+                        break
+                    else:
+                        pass
+        initlabel = np.array(initlabel)
+        initcontents = np.array(initcontents)
+
+        # trn_ds_fordraw_fully = Dataset(X_train_fordraw, Y_train_fordraw)
+
+        trn_ds_fordraw_fully = Dataset(np.concatenate([initcontents, X_train_fordraw]),
+                                       np.concatenate([initlabel, Y_train_fordraw]))
+        trn_ds_fordraw_none = Dataset(np.concatenate([initcontents, X_train_fordraw]),
+                                      np.concatenate([initlabel, [None] * len(Y_train_fordraw)]))
+
+        tst_ds_fordraw = Dataset(X_test_fordraw, Y_test_fordraw)
+        val_ds_fordraw = Dataset(X_val_fordraw, Y_val_fordraw)
+        quota_fordraw = len(Y_train_fordraw)
+
+        # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
+        #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
+        return trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, quota_fordraw, categories, len(categories)
+
 
         # [TODO]将普通AL 从DAL中拆分出来并生成特定的函数 > DONE
 
@@ -351,8 +408,6 @@ class BinaryClassTest(object):
         initcontents = np.array(initcontents)
 
         # trn_ds_fordraw_fully = Dataset(X_train_fordraw, Y_train_fordraw)
-
-
 
         trn_ds_fordraw_fully = Dataset(np.concatenate([initcontents, X_train_fordraw]), np.concatenate([initlabel, Y_train_fordraw]))
         trn_ds_fordraw_none = Dataset(np.concatenate([initcontents, X_train_fordraw]), np.concatenate([initlabel, [None] * len(Y_train_fordraw)]))
@@ -802,8 +857,13 @@ class BinaryClassTest(object):
                 E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
                 E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
             elif modelselect == 'dal':
-                trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
-                E_out1 = self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
+                lbr = IdealLabeler(trn_ds_fordraw_fully)
+                trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
+                qs_random = RandomSampling(trn_ds_random)
+                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, lbr, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                model = SVM(kernel='rbf', decision_function_shape='ovr')
+                E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
             else:
                 pass
 
@@ -817,11 +877,16 @@ class BinaryClassTest(object):
                 # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
             elif modelselect == 'dal':
                 # DAL的部分相对复杂，用两个split函数，一个跑图像（与TAL对比）；另一个拼接（Train和Test）
-
-                trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories_class, numclass = self.split_train_test_rnn(
-                    train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, n_labeled, wordslength)
-                E_out1 = self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, lbr, quota, batchsize, vocab_dir,
-                                                 wordslength, numclass, categories_class)
+                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, quota_fordraw, categories_class, numclass = self.split_train_test_rnn(
+                    train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
+                lbr = IdealLabeler(trn_ds_fordraw_fully)
+                trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
+                qs_random = RandomSampling(trn_ds_random)
+                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, lbr,
+                                                 quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                model = SVM(kernel='rbf', decision_function_shape='ovr')
+                E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw,
+                                             batchsize)
             else:
                 pass
 

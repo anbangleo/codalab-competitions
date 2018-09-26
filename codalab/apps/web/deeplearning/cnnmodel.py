@@ -13,7 +13,7 @@ import tensorflow as tf
 from sklearn import metrics
 
 from cnn_model_config import TCNNConfig, TextCNN
-from dealwordindict import read_vocab, read_category, batch_iter, build_vocab
+from dealwordindict import read_vocab, read_category, read_category_rnn,  batch_iter, build_vocab
 import tensorflow.contrib.keras as kr
 
 from libact.query_strategies import *
@@ -34,7 +34,7 @@ class CNN_Probability_Model:
         self.save_dir = 'checkpoints/textmergecnn_test_10000'
         self.save_path = os.path.join(self.save_dir, 'best_validation')  # 最佳验证结果保存路径
         self.config = TCNNConfig()
-        self.categories, self.cat_to_id = read_category(categories_class)
+        self.categories, self.cat_to_id = read_category_rnn(categories_class)
         self.words, self.word_to_id = read_vocab(self.vocab_dir)
         self.config.vocab_size = len(self.words)
         self.model = TextCNN(self.config)
