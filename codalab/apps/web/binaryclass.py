@@ -242,64 +242,119 @@ class BinaryClassTest(object):
         trn_ds = Dataset(X_train, Y_train)
         tst_ds = Dataset(X_test, Y_test)
         val_ds = Dataset(X_val, Y_val)
-        #
-        # # [TODO]将unlabel集label打为NONE同时与Train拼接
-        # trn_ds = Dataset(np.concatenate([X_train, X_unlabel]), np.concatenate([Y_train, [None] * len (Y_unlabel)]))
-        # val_ds = Dataset(X_val, Y_val)
-        # tst_ds = Dataset(X_test, Y_test)
-        # return trn_ds, val_ds, tst_ds, draw_ds, unlabelcontents, unlabelnames, categories, len(categories)
-        X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(
-            np.concatenate([X_train, X_test]), np.concatenate([Y_train, Y_test]), test_size=0.3)
-        X_test_fordraw, X_val_fordraw, Y_test_fordraw, Y_val_fordraw = train_test_split(
-            X_test_fordraw, Y_test_fordraw,  test_size=0.3)
+        # ===================以上是处理正式数据集的================
+        # ===================以下是划分效果集供跑效果用的================
+        data_id_train_fordraw, data_id_test_fordraw, label_id_train_fordraw, label_id_test_fordraw = train_test_split(
+            np.concatenate([data_id_train, data_id_test]), np.concatenate([label_id_train, label_id_test]), test_size=0.3)
+        data_id_test_fordraw, data_val_fordraw, label_id_test_fordraw, label_val_fordraw = train_test_split(
+            data_id_test_fordraw, label_id_test_fordraw,  test_size=0.3)
 
-        # X_train_fordraw_copy = copy.deepcopy(X_train_fordraw)
-        # Y_train_fordraw_copy = copy.deepcopy(Y_train_fordraw)
+        # X_train_fordraw, X_test_fordraw, Y_train_fordraw, Y_test_fordraw = train_test_split(
+        #     np.concatenate([X_train, X_test]), np.concatenate([Y_train, Y_test]), test_size=0.3)
+        # X_test_fordraw, X_val_fordraw, Y_test_fordraw, Y_val_fordraw = train_test_split(
+        #     X_test_fordraw, Y_test_fordraw,  test_size=0.3)
+        # -------------------处理DAL的部分-------------------
+        X_train_fordraw_dal = kr.preprocessing.sequence.pad_sequences(data_id_train_fordraw, wordslength)
+        y_train_temp = kr.utils.to_categorical(label_id_train_fordraw, num_classes=len(cat_to_id))
+        Y_train_fordraw_dal = self.convertlabel(y_train_temp)
+        X_test_fordraw_dal = kr.preprocessing.sequence.pad_sequences(data_id_test_fordraw, wordslength)
+        y_train_temp = kr.utils.to_categorical(label_id_test_fordraw, num_classes=len(cat_to_id))
+        Y_test_fordraw_dal = self.convertlabel(y_train_temp)
+        X_val_fordraw_dal = kr.preprocessing.sequence.pad_sequences(data_val_fordraw, wordslength)
+        y_train_temp = kr.utils.to_categorical(label_val_fordraw, num_classes=len(cat_to_id))
+        Y_val_fordraw_dal = self.convertlabel(y_train_temp)
+        tst_fordraw_dal = Dataset(X_test_fordraw_dal, Y_test_fordraw_dal)
+        val_fordraw = Dataset(X_val_fordraw_dal, Y_val_fordraw_dal)
+        # -------------------处理TAL的部分-------------------
+        X_train_fordraw_tal = []
+        X_test_fordraw_tal = []
+        res = []
+        for i in data_id_train_fordraw:
+            for j in range(wordslength):
+                a = i.count(j)
+                if a > 0:
+                    res.append(a)
+                else:
+                    res.append(0)
+            X_train_fordraw_tal.append(res)
+            res = []
+        res = []
+        for i in data_id_test_fordraw:
+            for j in range(wordslength):
+                a = i.count(j)
+                if a > 0:
+                    res.append(a)
+                else:
+                    res.append(0)
+            X_test_fordraw_tal.append(res)
+            res = []
+
+        # X_train = data_id_train
+        X_train_fordraw_tal = np.array(X_train_fordraw_tal)
+        Y_train_fordraw_tal = np.array(label_id_train_fordraw)
+
+        # X_test = data_id_test
+        X_test_fordraw_tal = np.array(X_test_fordraw_tal)
+        Y_test_fordraw_tal = np.array(label_id_test_fordraw)
+        tst_fordraw_tal = Dataset(X_test_fordraw_tal,Y_test_fordraw_tal)
+
+
         # 开始处理X_train_fordraw为了画图
-        distinctlabel_train = list(set(Y_train_fordraw))
-        distinctlabel_test = list(set(Y_test_fordraw))
+        distinctlabel_train = list(set(Y_train_fordraw_tal))
+        distinctlabel_test = list(set(Y_test_fordraw_tal))
         numofclasses_train = len(distinctlabel_train)
         numofclasses_test = len(distinctlabel_test)
-        initcontents = []
-        initlabel = []
+        initcontents_tal = []
+        initlabel_tal = []
+        initcontents_dal = []
+        initlabel_dal = []
         # initlabel = np.array(initlabel)
         # initcontents = np.array(initcontents)
         # [TODO] check the nums equal
-        maxinitnum = (len(X_train_fordraw)/numofclasses_train)/3
+        maxinitnum = (len(X_train_fordraw_tal)/numofclasses_train)/3
         maxinitnums = maxinitnum
         for i in distinctlabel_train:
-            for j in range(len(Y_train_fordraw)):
-                if Y_train_fordraw[j] == i:
-                    initcontents.append(X_train_fordraw[j])
-                    initlabel.append(Y_train_fordraw[j])
-
-                    # initcontents = np.append(initcontents, X_train_fordraw[j])
-                    # initlabel = np.append(initlabel, Y_train_fordraw[j])
-                    X_train_fordraw = np.delete(X_train_fordraw, j, axis=0)
-                    Y_train_fordraw = np.delete(Y_train_fordraw, j, axis=0)
+            for j in range(len(Y_train_fordraw_tal)):
+                if Y_train_fordraw_tal[j] == i:
+                    initcontents_tal.append(X_train_fordraw_tal[j])
+                    initlabel_tal.append(Y_train_fordraw_tal[j])
+                    initcontents_dal.append(X_train_fordraw_dal[j])
+                    initlabel_dal.append(Y_train_fordraw_dal[j])
+                    X_train_fordraw_dal = np.delete(X_train_fordraw_dal, j, axis=0)
+                    Y_train_fordraw_dal = np.delete(Y_train_fordraw_dal, j, axis=0)
+                    X_train_fordraw_tal = np.delete(X_train_fordraw_tal, j, axis=0)
+                    Y_train_fordraw_tal = np.delete(Y_train_fordraw_tal, j, axis=0)
                     maxinitnums = maxinitnums - 1
                     if maxinitnums == 0:
                         maxinitnums = maxinitnum
                         break
                     else:
                         pass
-        initlabel = np.array(initlabel)
-        initcontents = np.array(initcontents)
-
+        initlabel_tal = np.array(initlabel_tal)
+        initcontents_tal = np.array(initcontents_tal)
+        initlabel_dal = np.array(initlabel_dal)
+        initcontents_dal = np.array(initcontents_dal)
         # trn_ds_fordraw_fully = Dataset(X_train_fordraw, Y_train_fordraw)
 
-        trn_ds_fordraw_fully = Dataset(np.concatenate([initcontents, X_train_fordraw]),
-                                       np.concatenate([initlabel, Y_train_fordraw]))
-        trn_ds_fordraw_none = Dataset(np.concatenate([initcontents, X_train_fordraw]),
-                                      np.concatenate([initlabel, [None] * len(Y_train_fordraw)]))
+        trn_ds_fordraw_fully_tal = Dataset(np.concatenate([initcontents_tal, X_train_fordraw_tal]),
+                                       np.concatenate([initlabel_tal, Y_train_fordraw_tal]))
+        trn_ds_fordraw_none_tal = Dataset(np.concatenate([initcontents_tal, X_train_fordraw_tal]),
+                                      np.concatenate([initlabel_tal, [None] * len(Y_train_fordraw_tal)]))
 
-        tst_ds_fordraw = Dataset(X_test_fordraw, Y_test_fordraw)
-        val_ds_fordraw = Dataset(X_val_fordraw, Y_val_fordraw)
-        quota_fordraw = len(Y_train_fordraw)
+        trn_ds_fordraw_fully_dal = Dataset(np.concatenate([initcontents_dal, X_train_fordraw_dal]),
+                                           np.concatenate([initlabel_dal, Y_train_fordraw_dal]))
+        trn_ds_fordraw_none_dal = Dataset(np.concatenate([initcontents_dal, X_train_fordraw_dal]),
+                                          np.concatenate([initlabel_dal, [None] * len(Y_train_fordraw_dal)]))
+
+
+        quota_fordraw = len(Y_train_fordraw_tal)
 
         # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
         #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
-        return trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, quota_fordraw, categories, len(categories)
+        return trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
+        trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_fordraw_dal, val_fordraw,\
+        trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_fordraw_tal, \
+        quota_fordraw, categories, len(categories)
 
 
         # [TODO]将普通AL 从DAL中拆分出来并生成特定的函数 > DONE
@@ -858,13 +913,17 @@ class BinaryClassTest(object):
                 E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
                 E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
             elif modelselect == 'dal':
-                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
-                lbr = IdealLabeler(trn_ds_fordraw_fully)
-                trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
-                qs_random = RandomSampling(trn_ds_random)
-                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, lbr, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
+                trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, \
+                trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, \
+                quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
+                lbr_dal = IdealLabeler(trn_ds_fordraw_fully_dal)
+                lbr_tal = IdealLabeler(trn_ds_fordraw_fully_tal)
+                # trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
+                qs_random = RandomSampling(trn_ds_fordraw_none_tal)
+                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, lbr_dal, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
                 model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
+                E_in2, E_out2 = self.realrun_random(trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, lbr_tal, model, qs_random, quota_fordraw, batchsize)
             else:
                 pass
 
@@ -878,16 +937,17 @@ class BinaryClassTest(object):
                 # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
             elif modelselect == 'dal':
                 # DAL的部分相对复杂，用两个split函数，一个跑图像（与TAL对比）；另一个拼接（Train和Test）
-                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, quota_fordraw, categories_class, numclass = self.split_train_test_rnn(
-                    train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
-                lbr = IdealLabeler(trn_ds_fordraw_fully)
-                trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
-                qs_random = RandomSampling(trn_ds_random)
-                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none, tst_ds_fordraw, val_ds_fordraw, lbr,
-                                                 quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
+                trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, \
+                trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, \
+                quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
+                lbr_dal = IdealLabeler(trn_ds_fordraw_fully_dal)
+                lbr_tal = IdealLabeler(trn_ds_fordraw_fully_tal)
+                # trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
+                qs_random = RandomSampling(trn_ds_fordraw_none_tal)
+                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, lbr_dal, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
                 model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw,
-                                             batchsize)
+                E_in2, E_out2 = self.realrun_random(trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, lbr_tal, model, qs_random, quota_fordraw, batchsize)
             else:
                 pass
 
@@ -900,10 +960,10 @@ class BinaryClassTest(object):
             intern = int(quota_fordraw / batchsize)
         else:
             intern = int(quota_fordraw / batchsize) + 1
-        try:
-            self.plotforimage(np.arange(1, intern + 1), E_in1, E_in2, E_out1, E_out2, username)
-        except:
-            self.plotforimage(np.arange(1, intern + 2), E_in1, E_in2, E_out1, E_out2, username)
+        # try:
+        self.plotforimage(np.arange(1, intern + 1), E_in1, E_in2, E_out1, E_out2, username)
+        # except:
+        #     self.plotforimage(np.arange(1, intern + 2), E_in1, E_in2, E_out1, E_out2, username)
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
             first, scores = qs.make_query(return_score = True)
