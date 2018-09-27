@@ -698,41 +698,48 @@ class BinaryClassTest(object):
         else:
             intern = int(quota / batchsize) + 1
             finalnum = int(quota % batchsize)
-
-        for t in range(intern):
-            x_first_train = []
-            y_first_train = []
-
+        # 跑真实的数据，只要返回TOP N 个未标记集即可
+        if lbr == 'realrun':
             scores = model.predict_pro(trn_ds)
-
             unlabeled_entry_ids, X_pool = zip(*trn_ds.get_unlabeled_entries())
+            max_n = heapq.nsmallest(quota, range(len(scores)), scores.take)
+            return max_n
+        # 跑效果数据，真实的情况
+        else:
+            for t in range(intern):
+                x_first_train = []
+                y_first_train = []
 
-            if t == intern - 1 and finalnum != 0:
-                max_n = heapq.nsmallest(finalnum, range(len(scores)), scores.take)
-            else:
-                max_n = heapq.nsmallest(batchsize, range(len(scores)), scores.take)
+                scores = model.predict_pro(trn_ds)
 
-            X, _ = zip(*trn_ds.data)
+                unlabeled_entry_ids, X_pool = zip(*trn_ds.get_unlabeled_entries())
 
-            for ask_id in max_n:
-                real_id = unlabeled_entry_ids[ask_id]
-                lb = lbr.label(X[real_id])
-                trn_ds.update(real_id, lb)
-                x_first_train.append(X[real_id])
-                y_first_train.append(lb)
+                if t == intern - 1 and finalnum != 0:
+                    max_n = heapq.nsmallest(finalnum, range(len(scores)), scores.take)
+                else:
+                    max_n = heapq.nsmallest(batchsize, range(len(scores)), scores.take)
 
-            x_first_train = np.array(x_first_train)
-            y_first_train = np.array(y_first_train)
+                X, _ = zip(*trn_ds.data)
 
-            first_train = Dataset(x_first_train, y_first_train)
+                for ask_id in max_n:
+                    real_id = unlabeled_entry_ids[ask_id]
+                    lb = lbr.label(X[real_id])
+                    trn_ds.update(real_id, lb)
+                    x_first_train.append(X[real_id])
+                    y_first_train.append(lb)
 
-            best_val = model.retrain(trn_ds, val_ds, best_val, first_train)
+                x_first_train = np.array(x_first_train)
+                y_first_train = np.array(y_first_train)
 
-            # E_in = np.append(E_in, 1 - model.score(trn_ds))
-            E_out = np.append(E_out, 1 - model.score(tst_ds))
+                first_train = Dataset(x_first_train, y_first_train)
 
-        # E_time = get_time_dif(start_time)
-        return E_out
+                best_val = model.retrain(trn_ds, val_ds, best_val, first_train)
+
+                # E_in = np.append(E_in, 1 - model.score(trn_ds))
+                E_out = np.append(E_out, 1 - model.score(tst_ds))
+
+            # E_time = get_time_dif(start_time)
+            return E_out
 
     def plotforimage(self, query_num, E_in1, E_in2, E_out1, E_out2, username):
         dir = '/app/codalab/static/img/partpicture/'+username+'/'
@@ -965,11 +972,19 @@ class BinaryClassTest(object):
         # except:
         #     self.plotforimage(np.arange(1, intern + 2), E_in1, E_in2, E_out1, E_out2, username)
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
+
+
+
+
         if pushallask == 1:
-            first, scores = qs.make_query(return_score = True)
-            number, num_score = zip(*scores)[0], zip(*scores)[1]
-            num_score_array = np.array(num_score)
-            max_n = heapq.nlargest(quota, range(len(num_score_array)), num_score_array.take)
+            if modelselect == 'dal':
+                self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, 'realrun', quota, batchsize, vocab_dir,
+                                        wordslength, numclass, categories_class)
+            else:
+                first, scores = qs.make_query(return_score = True)
+                number, num_score = zip(*scores)[0], zip(*scores)[1]
+                num_score_array = np.array(num_score)
+                max_n = heapq.nlargest(quota, range(len(num_score_array)), num_score_array.take)
 
             # 只返回文件名
             if len(unlabeldatasetdir) < 1:
