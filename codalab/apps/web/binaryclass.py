@@ -739,7 +739,8 @@ class BinaryClassTest(object):
         # 将最后问询的结果以csv的格式返回
         willlabel_csvdir = '/app/codalab/static/img/partpicture/' + username + '/dict.csv'
         config = TRNNConfig()
-        batchsize = config.batch_size
+
+        batchsize = batchsize
         wordslength = config.seq_length
         vocab_size = config.vocab_size
         numclass = config.num_classes
@@ -830,13 +831,14 @@ class BinaryClassTest(object):
 
         else:
             pass
-        if quota % batchsize == 0:
+        if quota_fordraw % batchsize == 0:
             intern = int(quota_fordraw / batchsize)
         else:
             intern = int(quota_fordraw / batchsize) + 1
-
-        self.plotforimage(np.arange(1, intern + 1), E_in1, E_in2, E_out1, E_out2, username)
-
+        try:
+            self.plotforimage(np.arange(1, intern + 1), E_in1, E_in2, E_out1, E_out2, username)
+        except:
+            self.plotforimage(np.arange(1, intern + 2), E_in1, E_in2, E_out1, E_out2, username)
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
         if pushallask == 1:
             first, scores = qs.make_query(return_score = True)
