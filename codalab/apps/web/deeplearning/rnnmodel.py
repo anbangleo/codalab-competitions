@@ -21,7 +21,7 @@ except ImportError:
 
 
 #from active.merge_al_rnn.data.dealwordindict import read_vocab, read_category, batch_iter, build_vocab
-from dealwordindict import read_vocab, read_category, batch_iter, build_vocab
+from dealwordindict import read_vocab, read_category, read_category_rnn, batch_iter, build_vocab
 import time
 from datetime import timedelta
 
@@ -56,7 +56,7 @@ class RNN_Probability_Model:
         self.save_dir = 'checkpoints/textmergernn_test_10000'
         self.save_path = os.path.join(self.save_dir, 'best_validation')  # 最佳验证结果保存路径
         self.config = TRNNConfig()
-        self.categories, self.cat_to_id = read_category(categories_class)
+        self.categories, self.cat_to_id = read_category_rnn(categories_class)
         self.words, self.word_to_id = read_vocab(self.vocab_dir)
         self.config.vocab_size = len(self.words)
         self.model = TextRNN(self.config)
@@ -418,7 +418,7 @@ class RNN_Probability_Model_LSTM:
         self.save_dir = 'checkpoints/textmergernn_test_10000'
         self.save_path = os.path.join(self.save_dir, 'best_validation')  # 最佳验证结果保存路径
         self.config = TRNNConfigLSTM()
-        self.categories, self.cat_to_id = read_category(categories_class)
+        self.categories, self.cat_to_id = read_category_rnn(categories_class)
         self.words, self.word_to_id = read_vocab(self.vocab_dir)
         self.config.vocab_size = len(self.words)
         self.model = TextRNN(self.config)
