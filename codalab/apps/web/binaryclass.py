@@ -60,7 +60,6 @@ import heapq
 from rnnmodel import RNN_Probability_Model
 from rnn_model_config import TRNNConfig
 from cnnmodel import CNN_Probability_Model
-from cnn_model_config import TCNNConfig
 import random
 import codecs
 

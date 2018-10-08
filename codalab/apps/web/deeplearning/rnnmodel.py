@@ -62,8 +62,6 @@ class RNN_Probability_Model:
         self.model = TextRNN(self.config)
         self.inittraintimes = 100
         self.retraintimes = 80
-
-
         self.session = tf.Session()
         self.session.run(tf.global_variables_initializer())
 

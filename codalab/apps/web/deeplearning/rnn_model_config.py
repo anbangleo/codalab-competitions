@@ -52,6 +52,7 @@ class TRNNConfigLSTM(object):
 class TextRNN(object):
     """文本分类，RNN模型"""
     def __init__(self, config):
+        tf.reset_default_graph()
         self.config = config
 
         # 三个待输入的数据

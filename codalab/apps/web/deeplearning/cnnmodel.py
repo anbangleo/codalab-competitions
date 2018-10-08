@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -24,10 +23,10 @@ except NameError:
     unicode = str
 
 class CNN_Probability_Model:
-    def __init__(self, vocabdir, wordslength, batchsize, numclass, categories_class):
+    def __init__(self, vocabdir, wordslength, batchsize, num_classes, categories_class):
         self.vocab_dir = vocabdir
         self.tensorboard_dir = 'tensorboard/textmergecnn_test_10000'
-        self.numclass = numclass
+        self.numclass = num_classes
         self.wordslength = wordslength
 
         self.batchsize = batchsize
@@ -119,7 +118,7 @@ class CNN_Probability_Model:
         flag = False
         for epoch in range(self.config.num_epochs):
             print('Epoch:', epoch + 1)
-            batch_train = batch_iter(x_train, y_train, self.config.batch_size)
+            batch_train = batch_iter(x_train, y_train, self.batchsize)
             for x_batch, y_batch in batch_train:
                 feed_dict = self.feed_data(x_batch, y_batch, self.config.dropout_keep_prob)
 
@@ -290,8 +289,8 @@ class CNN_Probability_Model:
         }
 
         # self.categories = ['simple','complicated','preference']
-        self.categories = ['pe', 'furniture', 'entertainment', 'game', 'finical', 'home', 'edu', 'fashion', 'politic',
-                           'technique']
+        # self.categories = ['pe', 'furniture', 'entertainment', 'game', 'finical', 'home', 'edu', 'fashion', 'politic',
+        #                    'technique']
         y_pred_cls = self.session.run(self.model.y_pred_cls, feed_dict=feed_dict)
         y_pro = self.session.run(self.model.pred_pro, feed_dict=feed_dict)
 
@@ -313,8 +312,8 @@ class CNN_Probability_Model:
             self.model.input_x: kr.preprocessing.sequence.pad_sequences([data], self.wordslength),
             self.model.keep_prob: 1.0
         }
-        self.categories = ['pe', 'furniture', 'entertainment', 'game', 'finical', 'home', 'edu', 'fashion', 'politic',
-                      'technique']
+        # self.categories = ['pe', 'furniture', 'entertainment', 'game', 'finical', 'home', 'edu', 'fashion', 'politic',
+        #               'technique']
         y_pred_cls = self.session.run(self.model.y_pred_cls, feed_dict=feed_dict)
         y_pro = self.session.run(self.model.pred_pro, feed_dict=feed_dict)
         # print (y_pro)
@@ -353,9 +352,9 @@ class CNN_Probability_Model:
 
         # 评估
         print("Precision, Recall and F1-Score...")
-        categories = ['pe', 'furniture', 'entertainment', 'game', 'finical', 'home', 'edu', 'fashion', 'politic',
-                      'technique']
-        print(metrics.classification_report(y_test_cls, y_pred_cls, target_names=categories))
+        # categories = ['pe', 'furniture', 'entertainment', 'game', 'finical', 'home', 'edu', 'fashion', 'politic',
+        #               'technique']
+        print(metrics.classification_report(y_test_cls, y_pred_cls, target_names=self.categories))
 
         # 混淆矩阵
         print("Confusion Matrix...")

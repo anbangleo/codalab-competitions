@@ -5,10 +5,9 @@ import tensorflow as tf
 
 class TCNNConfig(object):
     """CNN配置参数"""
-
     embedding_dim = 64  # 词向量维度
     seq_length = 800  # 序列长度
-    num_classes = 2  # 类别数
+
     num_filters = 256  # 卷积核数目
     kernel_size = 5  # 卷积核尺寸
     vocab_size = 3000  # 词汇表达小
@@ -18,18 +17,26 @@ class TCNNConfig(object):
     dropout_keep_prob = 0.8  # dropout保留比例
     learning_rate = 1e-3  # 学习率
 
-    batch_size = 8  # 每批训练大小
+
     num_epochs = 10  # 总迭代轮次
     num_retrain_epochs = 4
 
     print_per_batch = 10  # 每多少轮输出一次结果
     save_per_batch = 2  # 每多少轮存入tensorboard
 
+    num_classes = 2
+    batch_size = 2
+    # def __init__(self, num_classes, batch_size):
+    #     num_classes = num_classes  # 类别数
+    #     batch_size = batch_size  # 每批训练大小
+
+
 
 class TextCNN(object):
     """文本分类，CNN模型"""
 
     def __init__(self, config):
+        tf.reset_default_graph()
         self.config = config
 
         # 三个待输入的数据
@@ -41,7 +48,7 @@ class TextCNN(object):
 
     def cnn(self):
         """CNN模型"""
-        # 词向量映射
+    #     # 词向量映射
         with tf.device('/cpu:0'):
             embedding = tf.get_variable('embedding', [self.config.vocab_size, self.config.embedding_dim])
             embedding_inputs = tf.nn.embedding_lookup(embedding, self.input_x)
