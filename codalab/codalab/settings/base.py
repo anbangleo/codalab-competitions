@@ -101,7 +101,7 @@ class Base(Settings):
    # LOCALE_PATHS = (
    #     os.path.join(BASE_DIR, 'locale'),
    # )
-    LOCALE_PATHS=('/app/codalab/locale',)
+    LOCALE_PATHS = ('/app/codalab/locale',)
 
 
     SITE_ID = 1
@@ -660,12 +660,12 @@ class DevBase(Base):
             'debug_toolbar.middleware.DebugToolbarMiddleware',
         )
 
-        DEBUG_TOOLBAR_CONFIG = {
-            'SHOW_TEMPLATE_CONTEXT': True,
-            'ENABLE_STACKTRACES': True,
-            ###Control the right side bar
-            'SHOW_TOOLBAR_CALLBACK': lambda x: True,
-        }
+        # DEBUG_TOOLBAR_CONFIG = {
+        #     'SHOW_TEMPLATE_CONTEXT': True,
+        #     'ENABLE_STACKTRACES': True,
+        #     ###Control the right side bar
+        #     'SHOW_TOOLBAR_CALLBACK': lambda x: True,
+        # }
 
         if os.environ.get('PIN_PASSCODE_ENABLED', False):
             EXTRA_MIDDLEWARE_CLASSES += ('pin_passcode.middleware.PinPasscodeMiddleware',)
