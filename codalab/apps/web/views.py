@@ -2130,7 +2130,7 @@ def developerlab(request):
                     if iftrain==1 and ifunlabel==1:
                         newdoc = Document(docfile = request.FILES['docfile'])
                         newdoc.creator = request.user
-                        #newdoc.save()#[todo]:change to save
+                        # newdoc.()#[todo]:change to savesave
 
                 else:
                     ifzip = 2
@@ -2142,8 +2142,8 @@ def developerlab(request):
             #doclist = list(Document.objects.filter(creator = request.user))
             #docfilecopy = Document.objects.filter(creator = request.user)[len(doclist)-1]['docfile']
             docfilecopy = '/app/codalab/thirdpart/'+str(request.user)+'/docfile.zip'
-            #documentss = Document.objects.all()
-            #documentss = documentss.filter(creator=request.user)
+            documentss = Document.objects.all()
+            documentss = documentss.filter(creator=request.user)
 
             if request.method == 'GET':
                 return HttpResponseRedirect(reverse('developerlab_upload'),{'documentss':documentss,'di':di,'docfilecopy':docfilecopy})

@@ -595,8 +595,8 @@ class BinaryClassTest(object):
             lb = lbr.label(X[ask_id])
             trn_ds.update(ask_id, lb)
             model.train(trn_ds)
-            E_in = np.append(E_in, 1 - model.score(trn_ds)) #in-sample error
-            E_out = np.append(E_out, 1 - model.score(tst_ds)) #out-sample error
+            E_in = np.append(E_in, model.score(trn_ds)) #in-sample error
+            E_out = np.append(E_out, model.score(tst_ds)) #out-sample error
 
         return E_in, E_out
 
@@ -625,8 +625,8 @@ class BinaryClassTest(object):
                 trn_ds.update(ask_id, lb)
 
             model.train(trn_ds)
-            E_in = np.append(E_in, 1 - model.score(trn_ds))
-            E_out = np.append(E_out, 1 - model.score(tst_ds))
+            E_in = np.append(E_in, model.score(trn_ds))
+            E_out = np.append(E_out, model.score(tst_ds))
             # print (E_out)
 
         # E_time = get_time_dif(start_time)
@@ -681,8 +681,8 @@ class BinaryClassTest(object):
 
             model.train(trn_ds)
 
-            E_in = np.append(E_in, 1 - model.score(trn_ds))
-            E_out = np.append(E_out, 1 - model.score(tst_ds))
+            E_in = np.append(E_in, model.score(trn_ds))
+            E_out = np.append(E_out, model.score(tst_ds))
         # E_time = get_time_dif(start_time)
 
         return E_in, E_out
@@ -735,7 +735,7 @@ class BinaryClassTest(object):
                 best_val = model.retrain(trn_ds, val_ds, best_val, first_train)
 
                 # E_in = np.append(E_in, 1 - model.score(trn_ds))
-                E_out = np.append(E_out, 1 - model.score(tst_ds))
+                E_out = np.append(E_out, model.score(tst_ds))
 
             # E_time = get_time_dif(start_time)
             return E_out
@@ -749,7 +749,7 @@ class BinaryClassTest(object):
         plt.plot(query_num, E_out1, 'r', label='AL')
         plt.plot(query_num, E_out2, 'b', label='Random')
         plt.xlabel('Number of Queries')
-        plt.ylabel('Error')
+        plt.ylabel('Accuracy')
         plt.title('Experiment Result')
         plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
                    fancybox=True, shadow=True, ncol=5)
