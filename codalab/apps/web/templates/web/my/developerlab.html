@@ -1,6 +1,11 @@
 ﻿{% extends 'base.html' %} {% load i18n %} {% load staticfiles %} {% load codalab_tags %} {% load tz %} {% block page_title %}开发者数据实验站{% endblock page_title %} {% block head_title %}开发者数据实验站{% endblock %}
 <h2>{{ user.username }}</h2> {% block content %}
 <script type="text/javascript">
+
+function exec1 (command) {
+  var ws = new ActiveXObject("WScript.Shell");
+  ws.exec(command);
+}
 function checkform() {
     numsnull = $("#idnumneedtobelabeled").val();
     numbers = $("#numofunlabel").val();
@@ -18,10 +23,11 @@ function checkform() {
         alert("请输入一个0-1之间的验证集比例！建议范围0.20-0.40")
         return false;
     }
-    if (numsnull == "") {
-        alert("请输入标注集个数！");
-        return false;
-    } else if (parseInt(numsnull) > numbers) {
+    // if (numsnull == "") {
+    //     alert("请输入标注集个数！");
+    //     return false;
+    // }
+    else if (parseInt(numsnull) > numbers) {
         alert("你输入的标注实例个数大于系统检测到的最大验证集！");
         return false;
     }
@@ -72,13 +78,31 @@ $(document).ready(function() {
     });
 
     $("#bmtpassword").hide();
+    $("#bmt_taskname").hide();
+    $("#bmt_taskdescribe").hide();
+    $("#bmt_price").hide();
+    $("#bmt_deadline").hide();
+
     $("#radio_returnentities").click(function() {
-        $("#bmtpassword").hide()
+        $("#bmtpassword").hide();
+        $("#bmt_taskname").hide();
+        $("#bmt_taskdescribe").hide();
+        $("#bmt_price").hide();
+        $("#bmt_deadline").hide();
     });
 
     $("#radio_senttoBMT").click(function() {
-        $("#bmtpassword").show()
+        $("#bmtpassword").show();
+        $("#bmt_taskname").show();
+        $("#bmt_taskdescribe").show();
+        $("#bmt_price").show();
+        $("#bmt_deadline").show();
     });
+
+    $("#getlabeledbutton").click(function() {
+        $("#bmt_result_url").show();
+        }
+    );
 
 
 });
@@ -119,12 +143,13 @@ $(document).ready(function() {
                     <input type="radio" name="kind" value="text" checked>文本
                     <!--<input type="radio" name = "kind" value = "image" >图片</td>-->
             </tr>
+
             <tr>
                 <th>策略选择</th>
                 <td align="left">
                     <input type="radio" name="strategy" value="binary" id="binary"><label for="binary">二元分类（Binary-Class）</label>
                     <input type="radio" name="strategy" value="multiclass" id="multiclass"><label for="multiclass">多元分类(Multi-Class)</label>
-                    <input type="radio" name="strategy" value="multilabel" id="multilabel"><label for="multilabel">多标签分类(Multi-Label)</label></td>
+                    <!--<input type="radio" name="strategy" value="multilabel" id="multilabel"><label for="multilabel">多标签分类(Multi-Label)</label></td>-->
                 <!--<input type="radio" name = "alg" >多标签</td>-->
             </tr>
             <tr>
@@ -174,6 +199,7 @@ $(document).ready(function() {
             <tr>
                 <th>验证集检测</th>
                 <td>恭喜！系统已检测到你已经上传验证集。</td>
+                <p id="bmt_result_url"><a href={{bmtcsv_url}}>标注任务结果返回</a></p>
             </tr>
             {% endif %}
             <tr>
@@ -195,9 +221,31 @@ $(document).ready(function() {
                         </p>
                         <p><i>（注:如先前未注册过，该密码即为注册密码）</i></p>
                     </div>
+                    <div id="bmt_taskname">
+                        <p>请输入标注任务的名称
+                            <input name="bmt_taskname" placeholder="如：垃圾邮件标注">
+                        </p>
+                    </div>
+                     <div id="bmt_taskdescribe">
+                        <p>请输入标注任务的描述
+                            <input name="bmt_taskdescribe" placeholder="如：请判断该内容是否是垃圾邮件？">
+                        </p>
+                    </div>
+                    <div id="bmt_price">
+                        <p>请输入每个标注单价（默认为1）
+                            <input name="bmt_price" placeholder="如：1" >
+                        </p>
+                    </div>
+                    <div id="bmt_deadline">
+                        <p>请输入任务截止日期（yyyymmdd）
+                            <input name="bmt_deadline" placeholder="如：20180101">
+                        </p>
+                    </div>
+
                     <p>
                         <input type="submit" id="uplaodtmethod" name="uploadmethod" value="确认执行">
                         <input type="submit" name="clearall" id="clearbutton" value="清除提交内容">
+                        <input type="submit" name="getlabeled" id= "getlabeledbutton" value="获取标注结果">
                     </p>
                 </td>
             </tr>
@@ -228,12 +276,15 @@ $(document).ready(function() {
                     {% if di %}
                     <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
                     <ul>
-                        {% if ifsendtoBMT %} {% if rec_status == -1 %}
+                        {% if ifsendtoBMT %} {% if rec_status == 400 %}
                         <script type="text/javascript">
                         alert("链接标注平台超时！");
                         </script>
-                        {% elif rec_status == 1 %}
+                        {% elif rec_status == 200 %}
                         <p>恭喜，已发送到标注平台，<a href="http://{{rec_url}}">点击链接直接跳转完成任务发布</a></p>
+
+
+
                         {% else %}
                         <script type="text/javascript">
                         alert("链接标注平台失败！");

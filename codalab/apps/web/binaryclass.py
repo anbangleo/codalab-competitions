@@ -23,7 +23,7 @@ plt.switch_backend('Agg')
 import zipfile
 import time
 import random
-import socket
+import urllib
 import csv
 import json
 import base64
@@ -60,6 +60,7 @@ import heapq
 from rnnmodel import RNN_Probability_Model
 from rnn_model_config import TRNNConfig
 from cnnmodel import CNN_Probability_Model
+from send_to_bmt import SendtoBMT
 import random
 import codecs
 
@@ -366,6 +367,8 @@ class BinaryClassTest(object):
         if not os.path.exists(vocab_dir):
             build_vocab(train_dir, vocab_dir, vocab_size, unlabel_dir, test_dir)
         categories, cat_to_id = read_category(train_dir)
+        classnames = list(set(categories))
+
         words, word_to_id = read_vocab(vocab_dir)
 
         data_id_train, label_id_train = process_file_rnn(train_dir, word_to_id, cat_to_id, 0, wordslength)
@@ -471,45 +474,7 @@ class BinaryClassTest(object):
 
             # draw_ds = Dataset(np.concatenate(X_train, X_test, X_val),
             #                   np.concatenate(Y_train, [NONE] * (len(Y_test) + len(Y_val))))
-        return trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw
-
-    def sendfile(self, filedir, filetype, username, useremail, password, numneedtobemarked):
-        SIZE = 65535
-        RECSIZE = 1024
-        jsontosend = {}
-        id = time.strftime("%Y", time.localtime())+time.strftime("%m", time.localtime())+time.strftime("%d", time.localtime())+time.strftime("%H", time.localtime())+time.strftime("%M", time.localtime())+time.strftime("%S", time.localtime())
-        id = id + str(random.randint(0, 9))+str(random.randint(0, 9))+str(random.randint(0, 9))+str(random.randint(0, 9))+str(random.randint(0, 9))
-        jsontosend['id'] = long(id)
-        jsontosend['username'] = username
-        jsontosend['email'] = useremail
-        jsontosend['password'] = password
-        jsontosend['type'] = filetype # 11 means text, 2 means image
-
-        jsontosend['numbersneedtobemarked'] = numneedtobemarked
-        jsontosend['createtime'] = str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        #js = json.dumps(jsontosend, sort_keys=True, indent=4, separators=(',', ':'))
-        js = json.dumps(jsontosend)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(('10.2.26.114', 11223))
-        s.send('c')
-        time.sleep(0.2)
-        s.send(js)
-
-        time.sleep(0.5)
-        s.send('f')
-        time.sleep(0.2)
-        with open(filedir, 'rb') as f:
-            for data in f:
-                s.send(data)
-
-        time.sleep(0.5)
-
-        data = s.recv(RECSIZE)
-        rec = json.loads(data)
-        rec_status = rec['status']
-        rec_url = rec['url']
-        s.close()
-        return rec_status, rec_url
+        return trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw, classnames
 
     def encryptbmt(self, bmtpassword):
         pwd = bmtpassword[::-1]
@@ -763,31 +728,39 @@ class BinaryClassTest(object):
 
     def myRegression(self, algorithm, trn_ds, none_trn_ds):
         if algorithm == 'qbc':
-            qs = QueryByCommitteePlus(trn_ds, models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
-            qs_fordraw = QueryByCommittee(none_trn_ds,
-                                          models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], )
+            qs = QueryByCommitteePlus(trn_ds, models=[LogisticRegression(C=1.0), SVM(C=1.0, decision_function_shape='ovr')], )
+            qs_fordraw = QueryByCommitteePlus(none_trn_ds,
+                                          models=[LogisticRegression(C=1.0), SVM(C=1.0, decision_function_shape='ovr') ], )
         elif algorithm == 'us':
-            qs = UncertaintySampling(trn_ds, method='lc', model=LogisticRegression())
-            qs_fordraw = UncertaintySampling(none_trn_ds, method='lc', model=LogisticRegression())
+            qs = UncertaintySampling(trn_ds, method='sm', model=LogisticRegression())
+            qs_fordraw = UncertaintySampling(none_trn_ds, method='sm', model=LogisticRegression())
         elif algorithm == 'albc':
-            qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
-                UncertaintySampling(trn_ds, method='lc', model=LogisticRegression()),
-                QueryByCommittee(trn_ds, models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], ), ],
-                                              T=quota,
-                                              uniform_sampler=True,
-                                              model=LogisticRegression()
-                                              )
-            qs_fordraw = ActiveLearningByLearning(none_trn_ds,
-                                                  query_strategies=[UncertaintySampling(none_trn_ds, method='lc',
-                                                                                        model=LogisticRegression()),
-                                                                    QueryByCommittee(none_trn_ds,
-                                                                                     models=[LogisticRegression(C=1.0),
-                                                                                             LogisticRegression(
-                                                                                                 C=0.4), ], ), ],
-                                                  T=quota,
-                                                  uniform_sampler=True,
-                                                  model=LogisticRegression()
-                                                  )
+            qs = QueryByCommitteePlus(trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                      SVM(C=0.4, decision_function_shape='ovr'),
+                                                      ], )
+                                                      # SVM(C=1.0, kernel='linear',decision_function_shape='ovr'),], )
+            qs_fordraw = QueryByCommitteePlus(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                               SVM(C=0.4, decision_function_shape='ovr'),
+                                                                   # SVM(C=1.0, kernel='linear', decision_function_shape='ovr')
+                                                                   ], )
+            # qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
+            #     UncertaintySampling(trn_ds, method='lc', model=LogisticRegression()),
+            #     QueryByCommittee(trn_ds, models=[LogisticRegression(C=1.0), LogisticRegression(C=0.4), ], ), ],
+            #                                   T=quota,
+            #                                   uniform_sampler=True,
+            #                                   model=LogisticRegression()
+            #                                   )
+            # qs_fordraw = ActiveLearningByLearning(none_trn_ds,
+            #                                       query_strategies=[UncertaintySampling(none_trn_ds, method='lc',
+            #                                                                             model=LogisticRegression()),
+            #                                                         QueryByCommittee(none_trn_ds,
+            #                                                                          models=[LogisticRegression(C=1.0),
+            #                                                                                  LogisticRegression(
+            #                                                                                      C=0.4), ], ), ],
+            #                                       T=quota,
+            #                                       uniform_sampler=True,
+            #                                       model=LogisticRegression()
+            #                                       )
         else:
             pass
 
@@ -796,28 +769,42 @@ class BinaryClassTest(object):
     def svmClassify(self, algorithm, trn_ds, none_trn_ds):
         if algorithm == 'qbc':
             qs = QueryByCommitteePlus(trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
-                                                      SVM(C=0.4, decision_function_shape='ovr'), ], )
-            qs_fordraw = QueryByCommittee(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
-                                                               SVM(C=0.4, decision_function_shape='ovr'), ], )
+                                                      SVM(C=0.4, decision_function_shape='ovr'),
+                                                      ], )
+                                                      # SVM(C=1.0, kernel='linear',decision_function_shape='ovr'),], )
+            qs_fordraw = QueryByCommitteePlus(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                               SVM(C=0.4, decision_function_shape='ovr'),
+                                                                   # SVM(C=1.0, kernel='linear', decision_function_shape='ovr')
+                                                                   ], )
         elif algorithm == 'us':
             qs = UncertaintySampling(trn_ds, method='sm',model=SVM(decision_function_shape='ovr'))
             qs_fordraw = UncertaintySampling(none_trn_ds, method='sm',model=SVM(decision_function_shape='ovr'))
         elif algorithm == 'albl':
-            qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
-                UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr')), QueryByCommittee(trn_ds, models=[
-                    SVM(C=1.0, decision_function_shape='ovr'), SVM(C=0.4, decision_function_shape='ovr'), ], ), ],
-                                              T=quota,
-                                              uniform_sampler=True,
-                                              model=SVM(kernel='linear', decision_function_shape='ovr')
-                                              )
-            qs_fordraw = ActiveLearningByLearning(none_trn_ds, query_strategies=[
-                UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr')),
-                QueryByCommittee(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
-                                                      SVM(C=0.4, decision_function_shape='ovr'), ], ), ],
-                                                  T=quota,
-                                                  uniform_sampler=True,
-                                                  model=SVM(kernel='linear', decision_function_shape='ovr')
-                                                  )
+            qs = QueryByCommitteePlus(trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                      SVM(C=0.4, decision_function_shape='ovr'),
+                                                      ], )
+                                                      # SVM(C=1.0, kernel='linear',decision_function_shape='ovr'),], )
+            qs_fordraw = QueryByCommitteePlus(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+                                                               SVM(C=0.4, decision_function_shape='ovr'),
+                                                                   # SVM(C=1.0, kernel='linear', decision_function_shape='ovr')
+                                                                   ], )
+
+
+            # qs = ActiveLearningByLearningPlus(trn_ds, query_strategies=[
+            #     UncertaintySampling(trn_ds, model=SVM(decision_function_shape='ovr')), QueryByCommittee(trn_ds, models=[
+            #         SVM(C=1.0, decision_function_shape='ovr'), SVM(C=0.4, decision_function_shape='ovr'), ], ), ],
+            #                                   T=quota,
+            #                                   uniform_sampler=True,
+            #                                   model=SVM(kernel='linear', decision_function_shape='ovr')
+            #                                   )
+            # qs_fordraw = ActiveLearningByLearning(none_trn_ds, query_strategies=[
+            #     UncertaintySampling(none_trn_ds, model=SVM(decision_function_shape='ovr')),
+            #     QueryByCommittee(none_trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
+            #                                           SVM(C=0.4, decision_function_shape='ovr'), ], ), ],
+            #                                       T=quota,
+            #                                       uniform_sampler=True,
+            #                                       model=SVM(kernel='linear', decision_function_shape='ovr')
+            #                                       )
         else:
             pass
 
@@ -840,7 +827,47 @@ class BinaryClassTest(object):
 
         return E_out
 
-    def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, batchsize, pushallask,docfile,username,useremail,bmtpassword):
+    def getbmtresult(self, username, bmtpassword, task_id, visual_value):
+
+        sendtobmt = SendtoBMT(username, bmtpassword)
+        token = sendtobmt.gettoken(username, bmtpassword)
+        data, status = sendtobmt.getResult(token, task_id)
+
+        csv_response = '/app/codalab/static/img/partpicture/' + username + '/bmtresponse.csv'
+        try:
+            j = json.loads(data)
+            # print j['data'][0]['$answer']
+        except:
+            j = 0
+
+        if j != 0 :
+            # ff = open(csv_response, 'w')
+            # ff.close()
+            with codecs.open(csv_response, 'wb', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                # writer.writerow([visual_value[0], visual_value[1]])
+                writer.writerow(['task_id', task_id])
+                writer.writerow(['标注任务', '标注结果'])
+                    # askidlist.append(key)
+                try:
+                    writer.writerow([j['data'][0]['task'], j['data'][0]['$answer'][2:-2]])
+                    writer.writerow([j['data'][1]['task'], j['data'][1]['$answer'][2:-2]])
+                    writer.writerow([j['data'][2]['task'], j['data'][2]['$answer'][2:-2]])
+                except:
+                    writer.writerow([j['data'][0]['task'], j['data'][0]['$answer'][2:-2]])
+                    writer.writerow([j['data'][1]['task'], j['data'][1]['$answer'][2:-2]])
+        else:
+            with codecs.open(csv_response, 'wb', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['暂无标记任务返回，请稍后'])
+
+        urllib.urlretrieve(csv_response, 'bmtresult.csv')
+
+        # rec_url = 'buaamt.nlsde.buaa.edu.cn'
+        # return csv_response
+
+
+    def maintodo(self, kind, modelselect, strategy, algorithm, quota, trainAndtest, batchsize, pushallask, docfile, username, useremail, bmtpassword, bmttask):
         zipfile.ZipFile(docfile).extractall('/app/codalab/thirdpart/'+username)
         train_dir = '/app/codalab/thirdpart/' + username + '/train.txt'
         unlabel_dir = '/app/codalab/thirdpart/' + username + '/unlabel.txt'
@@ -878,96 +905,116 @@ class BinaryClassTest(object):
         asknamelist = [] # 所有被问询的Unlabel
         E_in1, E_in2 = [], []
         E_out1, E_out2 = [], []
+        results = []
         if os.path.exists(unlabeldatasetdir):
             unlabeldatasetdir = os.listdir(unlabeldatasetdir)
         else:
             unlabeldatasetdir = []
 
-        #提交的是Train还是Train+Test
-        if trainAndtest == 1:
-            trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, maxinitnum, wordslength)
-            # trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(train_dir, test_dir)
-        # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
-        #     a =  len(trn_ds.get_labeled_entries()) # 89
-        #     b =  len(tst_ds.get_labeled_entries()) # 90
-        #     c =  len(trn_ds_fordraw_fully.get_labeled_entries()) # 143
-        #     d =  len(trn_ds_fordraw_none.get_labeled_entries()) # 45
-        #     e = len(tst_ds_fordraw.get_labeled_entries()) # 36
-        #     f = quota_fordraw #98
-        #     print cccc
-        else:
-            pass
-            # 提交的只有一个Train
-            # X_train, y_train, fully_tst_ds, tst_ds, val_ds = self.split_train_test(trainentity, testsize)
-            # trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(X_train, y_train, unlabelentity)
-            # real_trn_ds = copy.deepcopy(trn_ds)
-            # none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
+        for T in range(1):
 
-        trn_ds_random = copy.deepcopy(trn_ds_fordraw_none) # 原验证集强行划分部分未知None做效果用
-        qs_random = RandomSampling(trn_ds_random)
-        lbr = IdealLabeler(trn_ds_fordraw_fully)
+            #提交的是Train还是Train+Test
+            if trainAndtest == 1:
+                trn_ds, tst_ds, unlabelcontents, unlabelnames, trn_ds_fordraw_fully, trn_ds_fordraw_none, tst_ds_fordraw, quota_fordraw, classnames = self.split_train_test_tal(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, maxinitnum, wordslength)
+                # trn_ds_fordraw, n_labeled_fordraw, quota = self.getlabelnum(train_dir, test_dir)
+            # 暂时取消提交只有一个Train的逻辑，强行规定必须划分Test哪怕随机划分也好
+            #     a =  len(trn_ds.get_labeled_entries()) # 89
+            #     b =  len(tst_ds.get_labeled_entries()) # 90
+            #     c =  len(trn_ds_fordraw_fully.get_labeled_entries()) # 143
+            #     d =  len(trn_ds_fordraw_none.get_labeled_entries()) # 45
+            #     e = len(tst_ds_fordraw.get_labeled_entries()) # 36
+            #     f = quota_fordraw #98
+            #     print cccc
+            else:
+                pass
+                # 提交的只有一个Train
+                # X_train, y_train, fully_tst_ds, tst_ds, val_ds = self.split_train_test(trainentity, testsize)
+                # trn_ds, numoftrain, unlabelnames = self.split_train_test_unlabel(X_train, y_train, unlabelentity)
+                # real_trn_ds = copy.deepcopy(trn_ds)
+                # none_trn_ds = self.split_for_drawplot(real_trn_ds, numoftrain, quota)
 
-        if strategy == 'binary':
-            if modelselect == 'logic':
-                qs, qs_fordraw = self.myRegression(algorithm, trn_ds, trn_ds_fordraw_none)
-                model = LogisticRegression()
-                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
-                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
-            elif modelselect == 'svm':
-                qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
-                model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
-                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
-            elif modelselect == 'dal':
-                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
-                trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, \
-                trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, \
-                quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
-                lbr_dal = IdealLabeler(trn_ds_fordraw_fully_dal)
-                lbr_tal = IdealLabeler(trn_ds_fordraw_fully_tal)
-                # trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
-                qs_random = RandomSampling(trn_ds_fordraw_none_tal)
-                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, lbr_dal, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
-                model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_in2, E_out2 = self.realrun_random(trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, lbr_tal, model, qs_random, quota_fordraw, batchsize)
+            trn_ds_random = copy.deepcopy(trn_ds_fordraw_none) # 原验证集强行划分部分未知None做效果用
+            qs_random = RandomSampling(trn_ds_random)
+            lbr = IdealLabeler(trn_ds_fordraw_fully)
+
+            if strategy == 'binary':
+
+                if modelselect == 'logic':
+                    qs, qs_fordraw = self.myRegression(algorithm, trn_ds, trn_ds_fordraw_none)
+                    model = LogisticRegression()
+                    E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
+                    E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
+                elif modelselect == 'svm':
+                    qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
+                    model = SVM(kernel='rbf', decision_function_shape='ovr')
+                    E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
+                    E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
+                elif modelselect == 'dal':
+                    trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
+                    trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, \
+                    trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, \
+                    quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
+                    lbr_dal = IdealLabeler(trn_ds_fordraw_fully_dal)
+                    lbr_tal = IdealLabeler(trn_ds_fordraw_fully_tal)
+                    # trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
+                    qs_random = RandomSampling(trn_ds_fordraw_none_tal)
+                    E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, lbr_dal, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                    model = SVM(kernel='rbf', decision_function_shape='ovr')
+                    E_in2, E_out2 = self.realrun_random(trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, lbr_tal, model, qs_random, quota_fordraw, batchsize)
+                else:
+                    pass
+
+
+            elif strategy == 'multiclass':
+                if modelselect == 'svm':
+                    qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
+                    model = SVM(kernel='rbf', decision_function_shape='ovr')
+                    # E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
+                    E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
+                    E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
+                    # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
+                elif modelselect == 'dal':
+                    # DAL的部分相对复杂，用两个split函数，一个跑图像（与TAL对比）；另一个拼接（Train和Test）
+                    trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
+                    trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, \
+                    trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, \
+                    quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
+                    lbr_dal = IdealLabeler(trn_ds_fordraw_fully_dal)
+                    lbr_tal = IdealLabeler(trn_ds_fordraw_fully_tal)
+                    # trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
+                    qs_random = RandomSampling(trn_ds_fordraw_none_tal)
+                    E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, lbr_dal, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
+                    model = SVM(kernel='rbf', decision_function_shape='ovr')
+                    E_in2, E_out2 = self.realrun_random(trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, lbr_tal, model, qs_random, quota_fordraw, batchsize)
+                else:
+                    pass
+
+            elif strategy == 'multilabel':
+                pass
+
             else:
                 pass
 
-        elif strategy == 'multiclass':
-            if modelselect == 'svm':
-                qs, qs_fordraw = self.svmClassify(algorithm, trn_ds, trn_ds_fordraw_none)
-                model = SVM(kernel='rbf', decision_function_shape='ovr')
-                # E_in1, E_out1 = self.score_ideal(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw)
-                E_in1, E_out1 = self.realrun_qs(trn_ds_fordraw_none, tst_ds_fordraw, lbr, model, qs_fordraw, quota_fordraw, batchsize)
-                E_in2, E_out2 = self.realrun_random(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw, batchsize)
-                # E_in2, E_out2 = self.score_ideal(trn_ds_random, tst_ds_fordraw, lbr, model, qs_random, quota_fordraw)
-            elif modelselect == 'dal':
-                # DAL的部分相对复杂，用两个split函数，一个跑图像（与TAL对比）；另一个拼接（Train和Test）
-                trn_ds, tst_ds, val_ds, unlabelcontents, unlabelnames, \
-                trn_ds_fordraw_fully_dal, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, \
-                trn_ds_fordraw_fully_tal, trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, \
-                quota_fordraw, categories_class, numclass = self.split_train_test_rnn(train_dir, test_dir, unlabel_dir, vocab_dir, vocab_size, wordslength)
-                lbr_dal = IdealLabeler(trn_ds_fordraw_fully_dal)
-                lbr_tal = IdealLabeler(trn_ds_fordraw_fully_tal)
-                # trn_ds_random = copy.deepcopy(trn_ds_fordraw_none)  # 原验证集强行划分部分未知None做效果用
-                qs_random = RandomSampling(trn_ds_fordraw_none_tal)
-                E_out1 = self.DeepActiveLearning(algorithm, trn_ds_fordraw_none_dal, tst_ds_fordraw_dal, val_ds_fordraw, lbr_dal, quota_fordraw, batchsize, vocab_dir, wordslength, numclass, categories_class)
-                model = SVM(kernel='rbf', decision_function_shape='ovr')
-                E_in2, E_out2 = self.realrun_random(trn_ds_fordraw_none_tal, tst_ds_fordraw_tal, lbr_tal, model, qs_random, quota_fordraw, batchsize)
-            else:
-                pass
+        results.append(E_out1.tolist())
+        results.append(E_out2.tolist())
 
-        elif strategy == 'multilabel':
-            pass
-
-        else:
-            pass
         if quota_fordraw % batchsize == 0:
             intern = int(quota_fordraw / batchsize)
         else:
             intern = int(quota_fordraw / batchsize) + 1
         # try:
+
+        result = []
+        # [TODO] 多次运行取平均
+        # for ii in range(2):
+        #     _temp = []
+        #     for j in range(ii, len(results), 2):
+        #         _temp.append(results[j])
+        #     result.append(np.mean(_temp, axis=0))
+        # self.plotforimage(np.arange(1, (intern + 1)), E_in1, E_in2, result[0], result[1], username)
+
         self.plotforimage(np.arange(1, intern + 1), E_in1, E_in2, E_out1, E_out2, username)
+
         # except:
         #     self.plotforimage(np.arange(1, intern + 2), E_in1, E_in2, E_out1, E_out2, username)
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
@@ -1025,35 +1072,73 @@ class BinaryClassTest(object):
                     for key, value in unlabeldict.items():
                         #askidlist.append(key)
                         writer.writerow([key, value])
-                return asknamelist,willlabel_csvdir
+                return asknamelist, willlabel_csvdir
 
         # 向标注平台发送 [TODO]需要和标注平台融合
         else:
-            first, scores = qs.make_query(return_score = True)
-            number, num_score = zip(*scores)[0], zip(*scores)[1]
-            num_score_array = np.array(num_score)
-            max_n = heapq.nlargest(quota, range(len(num_score_array)),num_score_array.take)
-            for ask_id in max_n:
-                filename = unlabelnames[ask_id]
-                if filename.split('/')[-1] in unlabeldatasetdir:
-                    filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
-                    with open(filenamefull) as f:
-                        filebody = f.read()
-                        unlabeldict[filename] = filebody
+            # first, scores = qs.make_query(return_score = True)
+            # number, num_score = zip(*scores)[0], zip(*scores)[1]
+            # num_score_array = np.array(num_score)
+            # max_n = heapq.nlargest(quota, range(len(num_score_array)),num_score_array.take)
+            # for ask_id in max_n:
+            #     filename = unlabelnames[ask_id]
+            #     if filename.split('/')[-1] in unlabeldatasetdir:
+            #         filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
+            #         with open(filenamefull) as f:
+            #             filebody = f.read()
+            #             unlabeldict[filename] = filebody
+            #
+            #     asknamelist.append(filename)
+            #
+            # csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
+            # with open(csvdir, 'wb') as csv_file:
+            #     writer = csv.writer(csv_file)
+            #     writer.writerow(['name','entity'])
+            #     for key, value in unlabeldict.items():
+            #         #askidlist.append(key)
+            #         writer.writerow([key, value])
+            if modelselect == 'dal':
+                self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, 'realrun', quota, batchsize, vocab_dir,
+                                        wordslength, numclass, categories_class)
+            else:
+                first, scores = qs.make_query(return_score=True)
+                number, num_score = zip(*scores)[0], zip(*scores)[1]
+                num_score_array = np.array(num_score)
+                max_n = heapq.nlargest(quota, range(len(num_score_array)), num_score_array.take)
 
-                asknamelist.append(filename)
+                # 只返回文件名
+            datasetbmt = []
+            firstcolumn = ['task']
+            datasetbmt.append(firstcolumn)
+            emptylist = []
+            if len(unlabeldatasetdir) < 1:
 
-            csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
-            with open(csvdir, 'wb') as csv_file:
-                writer = csv.writer(csv_file)
-                writer.writerow(['name','entity'])
-                for key, value in unlabeldict.items():
-                    #askidlist.append(key)
-                    writer.writerow([key, value])
-            newpassword = self.encryptbmt(bmtpassword)
+                for ask_id in max_n:
+                    asknamelist.append(unlabelnames[ask_id])
+                    # writer.writerow([unlabelnames[ask_id], unlabelcontents[ask_id]])
+                    emptylist.append(unlabelcontents[ask_id])
+                    datasetbmt.append(emptylist)
+                    emptylist = []
+
+
+
+
+            sendtobmt = SendtoBMT(username, bmtpassword)
+
+            name = bmttask['name']
+            price = bmttask['price']
+            deadline = bmttask['deadline']
+            describe = bmttask['describe']
+            visual_value = classnames
+            truth_value = []
+            for i in range(len(visual_value)):
+                truth_value.append(str(i))
+
+            taskdata, rec_status = sendtobmt.decidetosend(name, 0, datasetbmt, 'hello world', price, deadline, describe, visual_value, visual_value)
+
+            task_id = int(taskdata[taskdata.index('task_id') + 10 : taskdata.index('}')])
 
             #rec_status, rec_url = self.sendfile(csvdir,11,username,useremail,newpassword,quota)
-
-            rec_status = 0
-            rec_url = 'www.baidu.com'
-            return rec_status, rec_url, asknamelist
+            # rec_status = 0
+            rec_url = 'http://buaamt.nlsde.buaa.edu.cn/requester_my_task'
+            return rec_status, rec_url, asknamelist, task_id, visual_value
