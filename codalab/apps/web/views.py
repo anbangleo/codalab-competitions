@@ -2183,7 +2183,10 @@ def developerlab(request):
                 bmttask = {}
                 bmttask['name'] = str(request.POST.get('bmt_taskname'))
                 bmttask['describe'] = str(request.POST.get('bmt_taskdescribe'))
-                bmttask['price'] = int(request.POST.get('bmt_price'))
+                try:
+                    bmttask['price'] = int(request.POST.get('bmt_price'))
+                except:
+                    bmttask['price'] = ''
                 bmttask['deadline'] = str(request.POST.get('bmt_deadline')) + '000000'
 
                 # testsize = request.POST.get('testsize')

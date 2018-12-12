@@ -2,9 +2,9 @@
 <h2>{{ user.username }}</h2> {% block content %}
 <script type="text/javascript">
 
-function exec1 (command) {
-  var ws = new ActiveXObject("WScript.Shell");
-  ws.exec(command);
+function starttrain()
+{
+    alert("已开始训练，请耐心等待结果返回：）");
 }
 function checkform() {
     numsnull = $("#idnumneedtobelabeled").val();
@@ -243,7 +243,7 @@ $(document).ready(function() {
                     </div>
 
                     <p>
-                        <input type="submit" id="uplaodtmethod" name="uploadmethod" value="确认执行">
+                        <input type="submit" id="uplaodtmethod" name="uploadmethod" value="确认执行" onclick="starttrain()">
                         <input type="submit" name="clearall" id="clearbutton" value="清除提交内容">
                         <input type="submit" name="getlabeled" id= "getlabeledbutton" value="获取标注结果">
                     </p>
@@ -274,7 +274,7 @@ $(document).ready(function() {
                 <th>执行结果</th>
                 <td>
                     {% if di %}
-                    <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
+
                     <ul>
                         {% if ifsendtoBMT %} {% if rec_status == 400 %}
                         <script type="text/javascript">
@@ -282,7 +282,7 @@ $(document).ready(function() {
                         </script>
                         {% elif rec_status == 200 %}
                         <p>恭喜，已发送到标注平台，<a href="http://{{rec_url}}">点击链接直接跳转完成任务发布</a></p>
-
+                        <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
 
 
                         {% else %}

@@ -24,7 +24,7 @@ class TCNNConfig(object):
     print_per_batch = 10  # 每多少轮输出一次结果
     save_per_batch = 2  # 每多少轮存入tensorboard
 
-    num_classes = 2
+    num_classes = 3
     batch_size = 2
     # def __init__(self, num_classes, batch_size):
     #     num_classes = num_classes  # 类别数
