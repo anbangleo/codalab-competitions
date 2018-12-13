@@ -68,7 +68,7 @@ $(document).ready(function() {
          });
     });
     $("#multilabel").click(function() {
-         $("#mlogic").hide();
+         $("#mlogic").show();
          $("#mdal").hide();
          $("#msvm").click(function() {
             $("#algforbinary").hide();
@@ -199,7 +199,7 @@ $(document).ready(function() {
             <tr>
                 <th>验证集检测</th>
                 <td>恭喜！系统已检测到你已经上传验证集。</td>
-                <p id="bmt_result_url"><a href={{bmtcsv_url}}>标注任务结果返回</a></p>
+
             </tr>
             {% endif %}
             <tr>
@@ -273,23 +273,27 @@ $(document).ready(function() {
             <tr>
                 <th>执行结果</th>
                 <td>
+
                     {% if di %}
 
                     <ul>
-                        {% if ifsendtoBMT %} {% if rec_status == 400 %}
+                        {% if ifsendtoBMT %}
+                            {% if rec_status == 400 %}
                         <script type="text/javascript">
                         alert("链接标注平台超时！");
                         </script>
-                        {% elif rec_status == 200 %}
+                             {% elif rec_status == 200 %}
                         <p>恭喜，已发送到标注平台，<a href="http://{{rec_url}}">点击链接直接跳转完成任务发布</a></p>
-                        <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
-
-
+                        <p id="bmt_result_url"><a href={{bmtcsv_url}}>获取标注任务结果</a></p>
+                        <!--<p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>-->
                         {% else %}
                         <script type="text/javascript">
                         alert("链接标注平台失败！");
                         </script>
-                        {% endif %} {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <p> <a href={{csvdir}}> 点击链接下载待标注的实例</a></p>
+                        {% endif %}
                         <!--{% for d in di %}-->
                         <!--<li>{{d}}</li>-->
                         <!--{% endfor %}-->

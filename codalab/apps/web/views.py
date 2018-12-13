@@ -2075,6 +2075,9 @@ def developerlab(request):
     global visual_value
 
     bmtcsv_url = '/static/img/partpicture/' + str(request.user) + '/bmtresponse.csv'
+    picture_url = '/static/img/partpicture/' + str(request.user) + '/compare.png'
+    csv_url = '/static/img/partpicture/' + str(request.user) + '/dict.csv'
+
     visual_value = ['yes','no']
     if request.method == 'POST':
 
@@ -2091,12 +2094,12 @@ def developerlab(request):
             numofdataset = 0
             numofunlabel = 0
             ifzip = 0 # 0 is none, 1 is valid, 2 is wrong
-            picture_url = '/static/img/partpicture/' + str(request.user) + '/compare.png'
-            csv_url = '/static/img/partpicture/' + str(request.user) + '/dict.csv'
-            if os.path.exists(picture_url):
-                os.remove(picture_url)
-            if os.path.exists(csv_url):
-                os.remove(csv_url)
+            if os.path.exists('/app/codalab'+picture_url):
+                os.remove('/app/codalab'+picture_url)
+            if os.path.exists('/app/codalab'+csv_url):
+                os.remove('/app/codalab'+csv_url)
+            if os.path.exists('/app/codalab'+bmtcsv_url):
+                os.remove('/app/codalab'+bmtcsv_url)
 
             return HttpResponseRedirect(reverse('developerlab_upload'), {'ifzip':ifzip,'iftrain':iftrain,'ifunlabel':ifunlabel,'iftest':iftest, 'ifdataset':ifdataset, 'numofdataset':numofdataset, 'numofunlabel':numofunlabel, 'bmtcsv_url':bmtcsv_url})
 
@@ -2151,7 +2154,7 @@ def developerlab(request):
 
                     if 'test.txt' in expunlabeldataset:
                         iftest = 1
-                    if iftrain==1 and ifunlabel==1:
+                    if iftrain == 1 and ifunlabel == 1:
                         newdoc = Document(docfile = request.FILES['docfile'])
                         newdoc.creator = request.user
                         # newdoc.()#[todo]:change to savesave
@@ -2209,9 +2212,6 @@ def developerlab(request):
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize,markmethod
                     di, csvdir = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled, 1, batchsize, markmethod, docfilecopy, username, useremail, bmtpassword, bmttask)
-
-                    picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
-                    csv_url = '/static/img/partpicture/'+str(request.user)+'/dict.csv'
                     return HttpResponseRedirect(reverse('developerlab_upload'), {'di': di, 'docfilecopy': docfilecopy, 'kind': kind, 'picture_url': picture_url, 'csvdir': csv_url, 'bmtcsv_url':bmtcsv_url})
 
                 #[TODO]向标注平台发送
@@ -2221,7 +2221,6 @@ def developerlab(request):
                     binary = BinaryClassTest()
                     #numneedtobelabeled, trainandtest, testsize, markmethod
                     rec_status, rec_url, di, task_id, visual_value = binary.maintodo(kind, model, strategy, alg, numneedtobelabeled, 1, batchsize, markmethod, docfilecopy, username, useremail, bmtpassword, bmttask)
-                    picture_url = '/static/img/partpicture/'+str(request.user)+'/compare.png'
                     return HttpResponseRedirect(reverse('developerlab_upload'), {'di':di,'docfilecopy':docfilecopy,'ifsendtoBMT':ifsendtoBMT,'rec_status':rec_status, 'rec_url':rec_url,'picture_url':picture_url , 'bmtcsv_url':bmtcsv_url})
             else:
 

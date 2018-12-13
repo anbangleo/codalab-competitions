@@ -239,7 +239,9 @@ class BinaryClassTest(object):
         # 将test集拆分成test 和val
         X_test, X_val, Y_test, Y_val = train_test_split(X_test, Y_test, test_size=0.2)
 
-        trn_ds = Dataset(X_train, Y_train)
+        # trn_ds = Dataset(X_train, Y_train)
+        trn_ds = Dataset(np.concatenate([X_train, X_unlabel]),
+                                       np.concatenate([Y_train, [None] *len(Y_unlabel)]))
         tst_ds = Dataset(X_test, Y_test)
         val_ds = Dataset(X_val, Y_val)
         # ===================以上是处理正式数据集的================
@@ -734,7 +736,7 @@ class BinaryClassTest(object):
         elif algorithm == 'us':
             qs = UncertaintySampling(trn_ds, method='sm', model=LogisticRegression())
             qs_fordraw = UncertaintySampling(none_trn_ds, method='sm', model=LogisticRegression())
-        elif algorithm == 'albc':
+        elif algorithm == 'albl':
             qs = QueryByCommitteePlus(trn_ds, models=[SVM(C=1.0, decision_function_shape='ovr'),
                                                       SVM(C=0.4, decision_function_shape='ovr'),
                                                       ], )
@@ -1019,13 +1021,11 @@ class BinaryClassTest(object):
         #     self.plotforimage(np.arange(1, intern + 2), E_in1, E_in2, E_out1, E_out2, username)
         # 返回一批实例,返回分数是为了解决不标注的情况下无法自动更新的问题
 
-
-
-
         if pushallask == 1:
             if modelselect == 'dal':
-                self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, 'realrun', quota, batchsize, vocab_dir,
+                max_n = self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, 'realrun', quota, batchsize, vocab_dir,
                                         wordslength, numclass, categories_class)
+
             else:
                 first, scores = qs.make_query(return_score = True)
                 number, num_score = zip(*scores)[0], zip(*scores)[1]
@@ -1064,7 +1064,6 @@ class BinaryClassTest(object):
                             unlabeldict[filename] = filebody
 
                     asknamelist.append(filename)
-
                 csvdir = '/app/codalab/static/img/partpicture/'+username+'/dict.csv'
                 with open(willlabel_csvdir, 'wb') as csv_file:
                     writer = csv.writer(csv_file)
@@ -1076,29 +1075,8 @@ class BinaryClassTest(object):
 
         # 向标注平台发送 [TODO]需要和标注平台融合
         else:
-            # first, scores = qs.make_query(return_score = True)
-            # number, num_score = zip(*scores)[0], zip(*scores)[1]
-            # num_score_array = np.array(num_score)
-            # max_n = heapq.nlargest(quota, range(len(num_score_array)),num_score_array.take)
-            # for ask_id in max_n:
-            #     filename = unlabelnames[ask_id]
-            #     if filename.split('/')[-1] in unlabeldatasetdir:
-            #         filenamefull = '/app/codalab/thirdpart/'+username+'/unlabel/'+filename.split('/')[-1]
-            #         with open(filenamefull) as f:
-            #             filebody = f.read()
-            #             unlabeldict[filename] = filebody
-            #
-            #     asknamelist.append(filename)
-            #
-            # csvdir = '/app/codalab/thirdpart/'+username+'/dict.csv'
-            # with open(csvdir, 'wb') as csv_file:
-            #     writer = csv.writer(csv_file)
-            #     writer.writerow(['name','entity'])
-            #     for key, value in unlabeldict.items():
-            #         #askidlist.append(key)
-            #         writer.writerow([key, value])
             if modelselect == 'dal':
-                self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, 'realrun', quota, batchsize, vocab_dir,
+                max_n = self.DeepActiveLearning(algorithm, trn_ds, tst_ds, val_ds, 'realrun', quota, batchsize, vocab_dir,
                                         wordslength, numclass, categories_class)
             else:
                 first, scores = qs.make_query(return_score=True)
@@ -1119,9 +1097,6 @@ class BinaryClassTest(object):
                     emptylist.append(unlabelcontents[ask_id])
                     datasetbmt.append(emptylist)
                     emptylist = []
-
-
-
 
             sendtobmt = SendtoBMT(username, bmtpassword)
 
